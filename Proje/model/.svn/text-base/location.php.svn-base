@@ -1,0 +1,149 @@
+<?php
+
+Class ModelLocation extends Controller{
+	
+	public function getCities ( $country_id = 1) {
+	
+		$query = $this->db->query("SELECT c.id, c.name, l.lat, l.lon, l.zoom FROM city c LEFT JOIN location l ON c.location_id = l.id WHERE c.country_id = '".(int)$country_id."' ORDER BY c.sort_order ASC");
+		
+		if ( $query->rows ) {
+		
+			foreach ( $query->rows as $key => $value ) {
+		
+				$query->rows[$key]['zoom'] = 8;
+		
+			}
+			
+			return $query->rows;
+		
+		}
+		
+		return false;
+	
+	}	
+	
+	public function getTowns ( $city_id = 1) {
+	
+		$query = $this->db->query("SELECT t.id, t.name, l.lat, l.lon, l.zoom FROM town t LEFT JOIN location l ON t.location_id = l.id WHERE t.city_id = '".(int)$city_id."' ORDER BY t.sort_order ASC");
+		
+		if ( $query->rows ) {
+		
+			foreach ( $query->rows as $key => $value ) {
+		
+				$query->rows[$key]['zoom'] = 12;
+		
+			}
+			
+			return $query->rows;
+		
+		}
+		
+		return false;
+	
+	}		
+	
+	public function getDistricts ( $town_id = 1) {
+	
+		if ( !$town_id ) return false;
+	
+		$query = $this->db->query("SELECT id, name FROM district WHERE town_id = '".(int)$town_id."' ORDER BY sort_order ASC");
+		
+		if ( $query->rows ) {
+		
+			foreach ( $query->rows as $key => $row ) {
+			
+				$query->rows[$key]['values'] = array();
+			
+				$quarters = $this->db->query("SELECT q.id, q.name, l.lat, l.lon, l.zoom FROM quarter q LEFT JOIN location l ON q.location_id = l.id WHERE q.district_id = '".(int)$row['id']."' ORDER BY q.sort_order ASC");
+			
+				if ( $quarters->rows ) {
+				
+					foreach ( $quarters->rows as $quarter ) {
+					
+						$quarter['lat'] 	= ($quarter['lat'] ? $quarter['lat'] : 0);
+						$quarter['lon'] 	= ($quarter['lon'] ? $quarter['lon'] : 0);
+						$quarter['zoom'] 	= 16;
+					
+						$query->rows[$key]['values'][] = $quarter;
+						
+					}
+				
+				} else {
+				
+					unset($query->rows[$key]);
+				
+				}
+			
+			}
+		
+			return $query->rows;
+		
+		}
+		
+		return false;
+	
+	}	
+	
+	public function getCityLocation ( $city_id = false ) {
+	
+		if ( !$city_id ) return false;
+		
+		$query = $this->db->query("SELECT l.* FROM city c LEFT JOIN location l ON c.location_id = l.id WHERE c.id = '".(int)$city_id."'");
+		
+		$data = array();
+		
+		if ( $query->rows ) {
+			
+			$query->row['zoom'] = $this->config->get('map_city_zoom');
+			
+			$data = $query->row;
+		
+		}
+		
+		return $data;
+	
+	}	
+	
+	public function getQuarterLocation ( $quarter_id = false ) {
+	
+		if ( !$quarter_id ) return false;
+		
+		$query = $this->db->query("SELECT l.* FROM quarter q LEFT JOIN location l ON q.location_id = l.id WHERE q.id = '".(int)$quarter_id."'");
+		
+		$data = array();
+		
+		if ( $query->rows ) {
+			
+			$query->row['zoom'] = $this->config->get('map_quarter_coom');
+			
+			$data = $query->row;
+		
+		}
+		
+		return $data;
+	
+	}	
+	
+	public function getTownLocation ( $town_id = false ) {
+	
+		if ( !$town_id ) return false;
+		
+		$query = $this->db->query("SELECT l.* FROM town t LEFT JOIN location l ON t.location_id = l.id WHERE t.id = '".(int)$town_id."'");
+		
+		$data = array();
+		
+		if ( $query->rows ) {
+			
+			$query->row['zoom'] = $this->config->get('map_town_zoom');
+			
+			$data = $query->row;
+		
+		}
+		
+		return $data;
+	
+	}
+	
+}
+
+?>

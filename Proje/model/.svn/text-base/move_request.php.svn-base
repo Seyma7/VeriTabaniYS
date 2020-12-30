@@ -1,0 +1,49 @@
+<?php
+
+Class ModelMoveRequest extends Controller{
+	
+	public function getLasts ( $limit = 5 ) {
+
+		$query = $this->db->query("SELECT mr.*, c.username, mc.name AS category, c1.name AS from_city, t1.name AS from_town, q1.name AS from_quarter, c2.name AS to_city, t2.name AS to_town, q2.name AS to_quarter FROM move_request mr LEFT JOIN customer c ON mr.customer_id = c.id LEFT JOIN move_category mc ON mr.category_id = mc.id LEFT JOIN city c1 ON mr.from_city = c1.id LEFT JOIN town t1 ON mr.from_town = t1.id LEFT JOIN quarter q1 ON mr.from_quarter = q1.id LEFT JOIN city c2 ON mr.to_city = c2.id LEFT JOIN town t2 ON mr.to_town = t2.id LEFT JOIN quarter q2 ON mr.to_quarter = q2.id WHERE mr.status = '1' AND mr.move_date >= '".date('Y-m-d')."' ORDER BY mr.id DESC LIMIT " . (int)$limit);
+		
+		$data = array();
+		
+		if ( $query->rows ) {
+		
+			foreach ( $query->rows as $row ) {
+			
+				if ( $row['from_city'] && $row['from_town'] && $row['from_quarter'] ) {
+				
+					$from = $row['from_city'] . ', ' . $row['from_town'] . ', ' . $row['from_quarter'];
+				
+				} else { $from = '-'; }
+				
+				if ( $row['to_city'] && $row['to_town'] && $row['to_quarter'] ) {
+				
+					$to = $row['to_city'] . ', ' . $row['to_town'] . ', ' . $row['to_quarter'];
+				
+				} else { $to = '-'; }
+			
+				$data[] = array(
+				
+					'username' 	=> $row['username'],
+					'from'		=> $from,
+					'to'		=> $to,
+					'cell'		=> ($row['cell'] ? $row['cell'] : '-'),
+					'date'		=> floor ( ( strtotime($row['move_date']) - time() ) / ( 60*60*24 ) ),
+					'url'		=> $this->url->link("move", "detail", array("slug" => $row['slug'], 'id' => $row['id']))
+				
+				);
+			
+			}
+		
+		}
+		
+		
+		return $data;
+	
+	}	
+	
+}
+
+?>

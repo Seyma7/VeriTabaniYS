@@ -1,0 +1,13 @@
+{if $isLogged}
+<div id="footer">{$smarty.const.SYSTEM_NAME}</div>
+</div>
+<script type="text/javascript">{literal}
+$(document).ready(function(){
+	$('tr.gridrow_').mouseenter(function(){$(this).addClass('gridrowover')}).mouseleave(function(){$(this).removeClass('gridrowover')});
+});{/literal}
+</script>
+{/if}
+
+<script type="text/javascript" src="view/js/jquery.stringLengthValidation.js"></script>  
+</body>
+</html>

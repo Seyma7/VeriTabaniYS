@@ -1,0 +1,105 @@
+<?php  
+class ControllerProject extends Controller {
+	public function index() {
+	
+		$this->document->setTitle('Projeler');
+        
+        $this->load->model('location');
+        
+		$this->data['map_cities'] 	= $this->model_location->getCities();
+		$this->data['city_id']		= ($this->customer->isLogged() ? $this->customer->get('city_id') : 34);
+		        
+		
+		$this->template = 'project.html';
+		$this->children = array(
+			'header',
+			'menu',
+			'footer'
+		);		
+						
+		$this->response->set($this->render());
+	}
+    
+    public function add () {
+        
+        $this->document->setTitle('Yeni Proje Ekle');
+        
+        if ( $this->request->isPOST() ) {
+            
+            $this->data["error"] = "İlan verebilmek için Projeler Paketi satın almalısınız. Kurumsal Paketlere göz atmak için burayı <a href='/kurumsal-paketler'>tıklayın</a>.";
+                        
+        }
+        
+        if ( $this->session->has("error") ) {
+            
+            $this->data["error"] = $this->session->get("error");
+            
+            $this->session->delete("error");
+            
+        }        
+        
+			$this->data['estate_url'] 		= $this->url->link('add_post', false, array('category' => 'emlak'), array('step' => 1));
+			$this->data['vehicle_url'] 		= $this->url->link('add_post', false, array('category' => 'vasita'), array('step' => 1));
+			$this->data['move_request_url'] = $this->url->link("move_request", false, array(), array('step' => 1));
+			$this->data['action_url'] 		= $this->url->link('project', "add", array(), array('step' => (int)$this->request->get('step')));
+        
+		
+		$this->template = 'add_project.html';
+		$this->children = array(
+			'header',
+			'menu',
+			'footer'
+		);		
+						
+		$this->response->set($this->render());        
+        
+    }
+    
+    public function single () {
+        
+ 		$this->document->setTitle('Konut Projeleri');
+		
+		$this->data['breadcrumbs'][] = array('url' => $this->url->link('project'), 'name' => 'Projeler');
+		$this->data['breadcrumbs'][] = array('url' => $this->url->link('project', 'single'), 'name' => 'Konut Projeleri');
+		
+		$page 	= (!$this->request->has('page') || (int)$this->request->get('page') < 1 ? 1 : (int)$this->request->get('page'));
+		$limit 	= 12;
+		$start	= ($page - 1 ) * $limit;  
+        
+		$this->template = 'konut_projeleri.html';
+		$this->children = array(
+			'header',
+			'menu',
+			'footer'
+		);		
+						
+		$this->response->set($this->render());          
+        
+    }
+    
+    
+    public function trading () {
+        
+ 		$this->document->setTitle('Ticari Projeleri');
+		
+		$this->data['breadcrumbs'][] = array('url' => $this->url->link('project'), 'name' => 'Projeler');
+		$this->data['breadcrumbs'][] = array('url' => $this->url->link('project', 'trading'), 'name' => 'Ticari Projeleri');
+		
+		$page 	= (!$this->request->has('page') || (int)$this->request->get('page') < 1 ? 1 : (int)$this->request->get('page'));
+		$limit 	= 12;
+		$start	= ($page - 1 ) * $limit;  
+        
+		$this->template = 'ticari_projeler.html';
+		$this->children = array(
+			'header',
+			'menu',
+			'footer'
+		);		
+						
+		$this->response->set($this->render());          
+        
+    }    
+	
+
+}
+?>

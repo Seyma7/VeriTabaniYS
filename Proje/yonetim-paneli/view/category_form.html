@@ -1,0 +1,302 @@
+{$header}
+{if isset($error)}<div class="error_gen marg10"><b>Hata:</b> {$error}</div>{/if}
+<script type="text/javascript" src="view/js/jquery-ui-1.8.23.custom.min.js"></script>
+<link rel="stylesheet" type="text/css" href="view/css/flick/jquery-ui-1.8.23.custom.css" />
+<div class="box_head"></div>
+<div class="box_body">
+	<div class="heading_title">{$title}{if $current_category_path} : {$current_category_path}{/if}</div>
+	<div class="buttons marg10">
+		<a onClick="$('form#save').submit();" class="button">Kaydet</a>
+		<a href="{$cancel}" class="button">Vazgeç</a>
+		<span class="quick">Hızlı işlem:
+			<select name="" onChange="$('#stayOnPage').val($(this).val()); $('form#save').submit();" class="input1" style="width: 200px">
+				<option value="0">Bir işlem seçin</option>
+				<option value="new">Kaydet & Yeni Ekle</option>
+				<option value="edit">Kaydet & Sayfada Kal</option>
+			</select>
+		</span>
+	</div>
+	<form action="{$action}" method="post" autocomplete="off" id="save" name="save">
+		<input type="hidden" name="stayOnPage" id="stayOnPage" value="0" />
+		<div id="tabs" class="htabs">
+			<a href="#tab_general">Genel Bilgiler</a>
+		</div>
+		<div id="tab_general">
+			<table class="list">
+				<tr class="head">
+					<td width="5">&nbsp;</td>
+					<td colspan="2">Kategori Bilgileri</td>
+				</tr>
+				<tr class="gridrow">
+					<td></td>
+					<td class="field1"><span class="required">*</span> Kategori Adı:</td>
+					<td><input style='font-size:15px;' type="text" name="name" value="{$name}" class="input1 stringCounter" maxL="100" minL="1" maxlength="100" /></td>
+				</tr>
+				<tr class="gridrow">
+					<td></td>
+					<td class="field1">Kategori Sayfa Başlığı:</td>
+					<td><input style='font-size:15px;' type="text" name="page_title" value='{$page_title}' class="input1" maxlength="255" /></td>
+				</tr>
+				<tr class="gridrow">
+					<td></td>
+					<td class="field1">Üst Kategori:</td>
+					<td>
+					<select style='font-size:15px;' name="parent" class="input1">
+					{*<option value="0">-- Yok --</option>*}
+					{if $categories}{foreach from = $categories item = i}
+					<option value="{$i.id}"{if $parent == $i.id} selected{/if}>{$i.path}</option>{/foreach}{/if}
+					</select>
+					</td>
+				</tr>
+				<tr class="gridrow">
+					<td></td>
+					<td class="field1"><span class="required">*</span> SEO url:</td>
+					<td><input style='font-size:15px;' type="text" name="slug" value="{$slug}" class="input1 stringCounter" maxL="100" minL="1" maxlength="100" placeholder="Örn: spor-haberleri" /></td>
+				</tr>
+				<tr class="gridrow">
+					<td></td>
+					<td class="field1">Meta Etiket Açıklaması:</td>
+					<td><textarea style='font-size:15px;' name="meta_description" class="input1" style="font-size: 11px;" rows="5">{$meta_description}</textarea></td>
+				</tr>
+				<tr class="gridrow">
+					<td></td>
+					<td class="field1">Meta Etiket Anahtar Kelimeler:</td>
+					<td><textarea style='font-size:15px;' name="meta_keyword" class="input1" rows="5">{$meta_keyword}</textarea></td>
+				</tr>
+				<tr class="gridrow">
+					<td></td>
+					<td class="field1">Sıralama:</td>
+					<td><input style='font-size:15px;' type="text" name="sort_order" value="{$sort_order}" class="input1" /></td>
+				</tr>
+				<tr class="gridrow">
+					<td></td>
+					<td class="field1">Durumu:</td>
+					<td>
+					<select name="status" class="input1">
+					<option value="0"{if $status == 0} selected{/if}>Pasif</option>
+					<option value="1"{if $status == 1} selected{/if}>Aktif</option>
+					</select>
+					</td>
+				</tr>
+				{if isset($menu_status)}
+				<tr class="gridrow">
+					<td></td>
+					<td class="field1">Menü Olarak Kullanılsın mı?:</td>
+					<td>
+					<select name="menu_status" class="input1">
+					<option value="0"{if $menu_status == 0} selected{/if}>Hayır</option>
+					<option value="1"{if $menu_status == 1} selected{/if}>Evet</option>
+					</select>
+					</td>
+				</tr>
+				{/if}
+					<input type='hidden' name='category_page_title' value="{$category_page_title}"/>
+					<input type='hidden' name='category_seo_url' value="{$category_seo_url}"/>
+					<input type='hidden' name='category_meta1' value="{$category_meta1}"/>
+					<input type='hidden' name='category_meta2' value="{$category_meta2}"/>
+			</table>
+		</div>
+		<div class="clear"></div>
+	</form>
+
+</div>
+
+	<input type='hidden' name='current_category_path333' value="{$current_category_path333}"/>
+	<input type='hidden' name='current_category_path444' value="{$current_category_path444}"/>
+<script type="text/javascript">
+
+{literal}
+$(document).ready(function(){
+	$('#tabs a').tabs();
+});
+
+$('select[name="add_option"]').change(function(){
+
+	var select = $(this);
+
+	if ( $(select).val() != 0 ) {
+
+		$(select).attr('disabled', 'disabled');
+		$(select).parent().append('<img src="view/image/select_loader.gif" style="position: relative; top: 3px; left: 5px;" />');
+
+		$.ajax({
+			url		: 'index.php?controller=option&method=getOptionValues',
+			type	: 'POST',
+			dataType: 'JSON',
+			data	: 'option_id=' + $(select).val(),
+			success	: function(json) {
+
+				if ( json ) {
+
+					$('#option_content').append(json);
+
+				}
+
+			},
+			complete: function () {
+
+				$(select).parent().find('img').remove();
+				$(select).removeAttr('disabled');
+
+			}
+		});
+
+	}
+
+});
+
+$('select[name="add_option_from_category"]').change(function(){
+
+	var select = $(this);
+
+	if ( $(select).val() != 0 ) {
+
+		$(select).attr('disabled', 'disabled');
+		$(select).parent().append('<img src="view/image/select_loader.gif" style="position: relative; top: 3px; left: 5px;" />');
+
+		$.ajax({
+			url		: 'index.php?controller=option&method=getOptionValuesFromCategory',
+			type	: 'POST',
+			dataType: 'JSON',
+			data	: 'category_id=' + $(select).val(),
+			success	: function(json) {
+
+				if ( json ) {
+
+					$('#option_content').html(json);
+
+				}
+
+			},
+			complete: function () {
+
+				$(select).parent().find('img').remove();
+				$(select).removeAttr('disabled');
+
+			}
+		});
+
+	}
+
+});
+
+$('select[name="add_attribute"]').change(function(){
+
+	var select = $(this);
+
+	if ( $(select).val() != 0 ) {
+
+		$(select).attr('disabled', 'disabled');
+		$(select).parent().append('<img src="view/image/select_loader.gif" style="position: relative; top: 3px; left: 5px;" />');
+
+		$.ajax({
+			url		: 'index.php?controller=attribute&method=getAttributeValues',
+			type	: 'POST',
+			dataType: 'JSON',
+			data	: 'attribute_id=' + $(select).val(),
+			success	: function(json) {
+
+				if ( json ) {
+
+					$('#attribute_content').append(json);
+
+				}
+
+			},
+			complete: function () {
+
+				$(select).parent().find('img').remove();
+				$(select).removeAttr('disabled');
+
+			}
+		});
+
+	}
+
+});
+
+$('select[name="add_attribute_from_category"]').change(function(){
+
+	var select = $(this);
+
+	if ( $(select).val() != 0 ) {
+
+		$(select).attr('disabled', 'disabled');
+		$(select).parent().append('<img src="view/image/select_loader.gif" style="position: relative; top: 3px; left: 5px;" />');
+
+		$.ajax({
+			url		: 'index.php?controller=attribute&method=getAttributeValuesFromCategory',
+			type	: 'POST',
+			dataType: 'JSON',
+			data	: 'category_id=' + $(select).val(),
+			success	: function(json) {
+
+				if ( json ) {
+
+					$('#attribute_content').html(json);
+
+				}
+
+			},
+			complete: function () {
+
+				$(select).parent().find('img').remove();
+				$(select).removeAttr('disabled');
+
+			}
+		});
+
+	}
+
+});
+
+$('.remove_option_box').live('click', function(){
+
+	$(this).parent().parent().parent().parent().animate({opacity: 0}, 500, function(){$(this).remove();});
+
+});
+
+$('.select_all_option').live('click', function(){
+
+	$(this).parent().parent().parent().parent().find('input[type="checkbox"]').attr('checked', 'checked');
+
+});
+
+$('.leave_all_option').live('click', function(){
+
+	$(this).parent().parent().parent().parent().find('input[type="checkbox"]').removeAttr('checked');
+
+});
+
+
+
+$('input[name="name"]').bind('click change',function(){
+
+	var val  = $(this).attr('value');
+
+	if(val != ''){
+
+
+
+		var val2 = $('input[name="page_title"]').attr('value');
+		var val3 = $('input[name="category_page_title"]').attr('value');
+		var val4 = $('input[name="category_seo_url"]').attr('value');
+
+		var val5 = $('input[name="category_meta1"]').attr('value');
+		var val6 = $('input[name="category_meta2"]').attr('value');
+
+
+		$('input[name="page_title"]').attr('value',val3+val);
+		$('input[name="slug"]').attr('value',val4+val);
+
+		$('textarea[name="meta_description"]').val(val5+val+val6);
+		$('textarea[name="meta_keyword"]').val(val5+val+val6);
+
+	}
+
+});
+
+
+{/literal}
+</script>
+{$footer}

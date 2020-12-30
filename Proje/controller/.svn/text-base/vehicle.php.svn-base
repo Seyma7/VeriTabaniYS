@@ -1,0 +1,54 @@
+<?php  
+class ControllerVehicle extends Controller {
+	public function index() {
+	
+		$this->document->setTitle('Vasıta');
+
+		
+		if ($this->request->get('category')) {
+		
+			$query = $this->db->query("SELECT vc1.* FROM vehicle_category vc1 LEFT JOIN vehicle_category vc2 ON vc1.parent_id = vc2.id WHERE vc2.slug = '".$this->db->escape($this->request->get('category'))."'");
+		
+		} else {
+		
+			$query = $this->db->query("SELECT * FROM vehicle_category WHERE parent_id = '0'");
+		
+		}
+		
+		$this->data['tabs'][] = array('id' => 1, 'name' => 'Satılık', 'data' => array());
+		$this->data['tabs'][] = array('id' => 2, 'name' => 'Kiralık', 'data' => array());
+		
+		foreach ($this->data['tabs'] as $key => $tab) {
+		
+			if ($query->rows) {
+
+				foreach ($query->rows as $row) {
+				
+					$this->data['tabs'][$key]['data'][] = array(
+					
+						'name' 	=> $row['name'],
+						'url'	=> $this->url->link('vehicle', false, array('category' => $this->request->get('category'), 'sub_category' => $row['slug'], 'sale_type' => $tab['id']))
+					
+					);
+				
+				}
+				
+				$this->data['tabs'][$key]['data'][] = array('name' => 'Hepsi', 'url' => $this->url->link('vehicle', false, array('category' => $this->request->get('category'), 'sale_type' => $tab['id'])));
+			
+			}
+
+		}
+		
+		$this->template = 'vehicle.html';
+		$this->children = array(
+			'header',
+			'menu',
+			'footer'
+		);		
+						
+		$this->response->set($this->render());
+	}
+	
+
+}
+?>

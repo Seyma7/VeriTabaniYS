@@ -1,0 +1,64 @@
+<?php
+
+Class ModelMove Extends Controller {
+
+	public function getMoveImages ( $id = false ) {
+	
+		if ( !(int)$id ) return false;
+
+		$query = $this->db->query("SELECT * FROM move_image WHERE id = '".(int)$id."' ORDER BY preview, sort_order ASC");
+		
+		$data = array();
+		
+		if ( $query->rows ) {
+
+			$data = $query->rows;
+
+		}
+		
+		return $data;
+	
+	}
+	
+	public function getMoveValues ( $id = false ) {
+	
+		if ( !(int)$id ) return false;
+
+		$query = $this->db->query("SELECT ml.id AS list_id, ml.name AS list, mlv.name, mrv.value AS quantity FROM move_request_value mrv LEFT JOIN move_list_value mlv ON mrv.value_id = mlv.id LEFT JOIN move_list ml ON mlv.list_id = ml.id WHERE mrv.id = '".(int)$id."' ORDER BY ml.sort_order, mlv.sort_order ASC");
+		
+		$data = array();
+		$list = array();
+		
+		if ( $query->rows ) {
+		
+			foreach ( $query->rows as $row ) {
+		
+				if ( !isset($list[$row['list_id']]) ) {
+				
+					$list[$row['list_id']]['name'] 		= $row['list'];
+					$list[$row['list_id']]['values'] 	= array();
+				
+				}
+				
+				$value = $row['name'] . ( (int)$row['quantity'] > 0 ? " ({$row['quantity']} adet)" : false);
+				
+				if ( !in_array($value, $list[$row['list_id']]['values']) ) {
+				
+					array_push($list[$row['list_id']]['values'], $value);
+				
+				}
+			
+			}
+			
+			if ( $list ) $data = $list;
+
+		}
+		
+		return $data;
+	
+	}	
+
+
+}
+
+?>

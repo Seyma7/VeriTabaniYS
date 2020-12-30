@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ChangeListManager">
+    <list default="true" id="c9e02bd9-53a0-4f11-bcc1-0df2f57aaa4e" name="Default Changelist" comment="" />
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="ComposerSettings">
+    <execution>
+      <executable />
+    </execution>
+  </component>
+  <component name="ProjectId" id="1UyNPg6m9Qpoa17W5YUnVc4X5Rt" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showExcludedFiles" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">
+    <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
+    <property name="WebServerToolWindowFactoryState" value="false" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/yonetim-paneli/view" />
+  </component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="C:\wamp64\www\yonetim-paneli\view" />
+      <recent name="C:\wamp64\www" />
+      <recent name="C:\wamp64\www\yonetim-paneli\view\image" />
+    </key>
+  </component>
+  <component name="ServiceViewManager">
+    <option name="viewStates">
+      <list>
+        <serviceView>
+          <treeState>
+            <expand />
+            <select />
+          </treeState>
+        </serviceView>
+      </list>
+    </option>
+  </component>
+  <component name="SvnConfiguration">
+    <configuration />
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="c9e02bd9-53a0-4f11-bcc1-0df2f57aaa4e" name="Default Changelist" comment="" />
+      <created>1576324853343</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1576324853343</updated>
+      <workItem from="1576324856433" duration="6242000" />
+      <workItem from="1576357359478" duration="2889000" />
+      <workItem from="1576365654056" duration="1769000" />
+      <workItem from="1576398352050" duration="2086000" />
+      <workItem from="1576406973535" duration="3371000" />
+      <workItem from="1576410645977" duration="4204000" />
+      <workItem from="1576425251446" duration="3944000" />
+      <workItem from="1576444806411" duration="5380000" />
+      <workItem from="1576454369141" duration="3576000" />
+      <workItem from="1576487426146" duration="3427000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="1" />
+  </component>
+  <component name="WindowStateProjectService">
+    <state x="549" y="170" key="FileChooserDialogImpl" timestamp="1576410345226">
+      <screen x="0" y="0" width="1536" height="824" />
+    </state>
+    <state x="549" y="170" key="FileChooserDialogImpl/0.0.1536.824@0.0.1536.824" timestamp="1576410345226" />
+    <state x="604" y="343" key="NewPhpFileDialog" timestamp="1576428917449">
+      <screen x="0" y="0" width="1536" height="824" />
+    </state>
+    <state x="604" y="343" key="NewPhpFileDialog/0.0.1536.824@0.0.1536.824" timestamp="1576428917449" />
+    <state x="477" y="239" key="com.intellij.ide.util.TipDialog" timestamp="1576487572549">
+      <screen x="0" y="0" width="1536" height="824" />
+    </state>
+    <state x="477" y="239" key="com.intellij.ide.util.TipDialog/0.0.1536.824@0.0.1536.824" timestamp="1576487572549" />
+    <state x="540" y="84" key="com.intellij.openapi.editor.actions.MultiplePasteAction$ClipboardContentChooser" timestamp="1576338422868">
+      <screen x="0" y="0" width="1536" height="824" />
+    </state>
+    <state x="540" y="84" key="com.intellij.openapi.editor.actions.MultiplePasteAction$ClipboardContentChooser/0.0.1536.824@0.0.1536.824" timestamp="1576338422868" />
+    <state x="638" y="97" width="590" height="717" key="find.popup" timestamp="1576496604309">
+      <screen x="0" y="0" width="1536" height="824" />
+    </state>
+    <state x="638" y="97" width="590" height="717" key="find.popup/0.0.1536.824@0.0.1536.824" timestamp="1576496604309" />
+    <state x="802" y="61" width="672" height="678" key="search.everywhere.popup" timestamp="1576364976783">
+      <screen x="0" y="0" width="1536" height="824" />
+    </state>
+    <state x="802" y="61" width="672" height="678" key="search.everywhere.popup/0.0.1536.824@0.0.1536.824" timestamp="1576364976783" />
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" type="php">
+          <url>file://$PROJECT_DIR$/yonetim-paneli/controller/user.php</url>
+          <line>1</line>
+          <option name="timeStamp" value="2" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
+  </component>
+</project>

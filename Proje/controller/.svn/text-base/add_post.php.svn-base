@@ -1,0 +1,867 @@
+<?php  
+
+Class ControllerAddPost Extends Controller {
+
+	public $error = array();
+	
+	public function index() {
+	
+		$steps 	= array(1, 2, 3, 4, 5);
+		$step 	= ((int)$this->request->get('step') < 1 || !$this->request->has('step') ? 1 : (int)$this->request->get('step'));
+		
+		if ( !in_array($step, $steps) ) {
+		
+			return $this->forward('error');
+		
+		}
+	
+		$this->load->model('category');
+	
+		$category = $this->model_category->get_category_details($this->request->get('category'));
+	
+		if ( !$category->current || !in_array($category->current['tag'], array('emlak', 'vasita'))) {
+		
+			return $this->forward('error');
+		
+		}
+		
+		if ( !$this->customer->isLogged() ) {
+		
+			$this->session->set('redirect', $this->url->link('add_post', false, array('category' => $category->current['tag']), array('postId' => (int)$this->request->get('postId'), 'step' => (int)$this->request->get('step'))));
+			
+            $this->session->set('error', "İlan yayınlamak için üye girişi yapmalısınız!");
+            
+			$this->redirect($this->url->link('login'));
+		
+		}
+		
+		$this->load->model('post');
+		
+		$old_post = $this->model_post->notFinishedPost($this->customer->get('id'),  $category->current['id']);
+		
+		if ( $old_post && $old_post != (int)$this->request->get('postId') ) {
+		
+			$this->session->set('error', $category->current['name'] . ' kategorisine ait tamamlanmamış bir ilanınız bulunmaktadır.');
+			
+			$this->redirect($this->url->link('add_post', false, array('category' => $category->current['tag']), array('postId' => (int)$old_post, 'step' => 1)));
+		
+		}
+		
+		if ( $this->session->has('error') ) {
+		
+			$this->data['error'] = $this->session->get('error');
+			
+			$this->session->delete('error');
+		
+		}
+
+		$this->document->setTitle($category->current['name'] . ' ilanı ver - ' . $step . '. Adım');
+		
+		if ( $step == 1 ) {
+		
+			$post_info = array();
+			
+			if ( (int)$this->request->get('postId') ) {
+			
+				$query = $this->db->query("SELECT p.*, cm.path FROM post p LEFT JOIN category_mirror cm ON p.category_id = cm.id LEFT JOIN post_category pc ON p.id = pc.post_id WHERE p.id = '".(int)$this->request->get('postId')."' AND p.customer_id = '".$this->customer->get('id')."' AND pc.category_id = '".$category->current['id']."' AND p.status = '-1' GROUP BY p.id");
+
+				if ( $query->rows ) {
+				
+					$post_info = $query->row;
+				
+				} else {
+				
+					return $this->forward('error');
+				
+				}
+			
+			}			
+		
+			if ( $this->request->isPOST() ) {
+			
+				$query = $this->db->query("SELECT c.id FROM category c LEFT JOIN category_mirror cm ON c.id = cm.id LEFT JOIN category sc ON c.id= sc.parent WHERE c.id = '".(int)$this->request->post('category')."' AND c.status = '1' AND cm.path IS NOT NULL AND sc.id IS NULL GROUP BY c.id");
+			
+				if ( $query->rows ) {
+
+					$post_id = false;
+				
+					if ( $post_info ) {
+					
+						if ( $post_info['category_id'] != (int)$this->request->post('category') ) {
+						
+							$post_id = $post_info['id'];
+							
+							$this->db->query("UPDATE post SET category_id = '".(int)$this->request->post('category')."' WHERE id = '".$post_id."'");
+						
+						} else {
+						
+							$this->redirect($this->url->link('add_post', false, array('category' => $category->current['tag']), array('postId' => $post_info['id'], 'step' => 2)));
+						
+						}
+					
+					} else {
+					
+						$this->db->query("INSERT INTO post SET category_id = '".(int)$this->request->post('category')."', customer_id = '".$this->customer->get('id')."', date_added = NOW()");
+						
+						$post_id = $this->db->getLastId();
+					
+					}
+
+					if ( $post_id ) {
+					
+						$this->db->query("DELETE FROM post_category WHERE post_id = '".$post_id."'");
+						
+						$this->db->query("INSERT INTO post_category SET post_id = '".$post_id."', category_id = '".$category->current['id']."'");
+				
+						$categories = $this->model_category->get_parent_tree((int)$this->request->post('category'));
+						
+						if ( $categories ) {
+						
+							foreach ( $categories as $parents ) {
+							
+								foreach ( $parents as $parent ) {
+								
+									if ( $parent['selected'] ) {
+									
+										$this->db->query("INSERT INTO post_category SET post_id = '".$post_id."', category_id = '".$parent['id']."'");
+									
+									}
+								
+								}
+							
+							}
+						
+						}
+						
+						$this->model_post->clearPostOptions($post_id);
+						$this->model_post->clearPostAttributes($post_id);						
+						
+					
+					}
+					
+					$this->redirect($this->url->link('add_post', false, array('category' => $category->current['tag']), array('postId' => $post_id, 'step' => 2)));
+				
+				} else {
+				
+					$this->data['error'] = 'Lütfen ilan kategorinizi seçiniz.';
+				
+				}
+			
+			}
+			
+			if ( $post_info ) {
+			
+				$this->data['categories'] = $this->model_category->get_parent_tree($post_info['category_id']);
+				
+				krsort($this->data['categories']);
+
+				$this->data['category_path'] = $post_info['path'];
+			
+			} else {
+			
+				$categories = $this->model_category->get_sub_categories($category->current['id']);
+			
+				$this->data['categories'] = array();
+				
+				if ( $categories ) {
+				
+					foreach ( $categories as $value ) {
+					
+						$this->data['categories'][0][] = array(
+						
+							'id' 		=> $value['id'],
+							'name' 		=> $value['name'],
+							'selected' 	=> false
+						
+						);
+					
+					}
+				
+				}
+				
+				$this->data['category_path'] 	= $category->current['name'];
+			
+			}			
+		
+			$this->data['category_name'] 	= $category->current['name'];
+			$this->data['category_tag'] 	= $category->current['tag'];
+			$this->data['category_id'] 		= $category->current['id'];
+
+			$this->data['ajax_query_url'] 	= $this->url->link('_ajax_services', 'getCategories');
+
+			$this->data['estate_url'] 		= $this->url->link('add_post', false, array('category' => 'emlak'), array('step' => 1));
+			$this->data['vehicle_url'] 		= $this->url->link('add_post', false, array('category' => 'vasita'), array('step' => 1));
+			$this->data['move_request_url'] = $this->url->link("move_request", false, array(), array('step' => 1));
+			$this->data['action_url'] 		= $this->url->link('add_post', false, array('category' => $category->current['tag']), array('postId' => (int)$this->request->get('postId'), 'step' => (int)$this->request->get('step')));
+			
+			$this->template = 'add_post.html';
+		
+		} else if ( $step == 2 ) {
+		
+			$this->load->model('location');
+			$this->load->model('attribute');
+			$this->load->model('post');
+			$this->load->model('preserve');
+			$this->load->model('option');
+		
+			$query = $this->db->query("SELECT p.*, cm.path FROM post p LEFT JOIN category_mirror cm ON p.category_id = cm.id LEFT JOIN post_category pc ON p.id = pc.post_id WHERE p.id = '".(int)$this->request->get('postId')."' AND p.customer_id = '".$this->customer->get('id')."' AND pc.category_id = '".$category->current['id']."' AND p.status = '-1' GROUP BY p.id");
+
+			if ( $query->rows ) {
+
+				if ( $this->request->isPOST() && $this->validate() ) {
+				
+					// clear post data
+					
+					$this->model_post->clearPostOptions($query->row['id']);
+					$this->model_post->clearPostLocation($query->row['id']);
+					$this->model_post->clearPostAttributes($query->row['id']);
+					$this->model_preserve->clearPostBoldTitle($query->row['id']);
+					
+					// end clear post data
+					
+					$this->load->library('slug');
+					
+					$slug = new Slug;
+				
+					$this->db->query(
+					
+						"UPDATE post SET
+						name 				= '".$this->db->escape($this->request->post('name'))."',
+						slug 				= '".$this->db->escape($slug->title($this->request->post('name')))."',
+						description 		= '".$this->db->escape(((int)$this->request->post('description_type') == 1 ? $this->request->post('description_standart') : $this->request->post('description_advanced')))."',
+						description_type 	= '".(int)$this->request->post('description_type')."',
+						price 				= '".$this->db->escape(str_replace('.', '', $this->request->post('price')))."',
+						currency 			= '".$this->db->escape($this->request->post('currency'))."',
+						contact_name 		= '".$this->db->escape($this->customer->get('firstname') . ' ' . $this->customer->get('lastname'))."',
+						home_phone 			= '".$this->db->escape(($this->customer->get('home_phone') ? '+90-' . $this->customer->get('home_phone') : false))."',
+						work_phone 			= '".$this->db->escape(($this->customer->get('work_phone') ? '+90-' . $this->customer->get('work_phone') : false))."',
+						mobile_phone 		= '".$this->db->escape(($this->customer->get('mobile_phone') ? '+90-' . $this->customer->get('mobile_phone') : false))."',
+						publish_phone 		= '".($this->request->post('publish_phone') == 'on' ? 1 : 0)."'
+						WHERE id = '".$query->row['id']."'"
+					
+					);
+					
+					// insert post data
+					
+					if ( $this->request->post('opt') ) {
+					
+						$this->model_post->setPostOptions($this->request->post('opt'), $query->row['id']);
+					
+					}
+					
+					$this->model_post->setPostLocation($query->row['id'], $this->request->post('city_id'), $this->request->post('town_id'), $this->request->post('quarter_id'), $this->request->post('map_lat'), $this->request->post('map_lon'));
+				
+					if ( $this->request->post('attributes') ) {
+					
+						$this->model_post->setPostAttributes($this->request->post('attributes'), $query->row['id']);
+					
+					}	
+					
+					if ( $this->request->post('bold_title') == 'on' ) {
+					
+						$this->model_preserve->addPostBoldTitle($query->row['id']);
+					
+					}
+
+					// end insert post data		
+
+					
+					// redirect next step
+					
+					$this->redirect($this->url->link('add_post', false, array('category' => $category->current['tag']), array('postId' => $query->row['id'], 'step' => 3)));
+				
+				}
+				
+				if ( $this->error ) {
+				
+					foreach ( $this->error as $key => $value ) {
+					
+						$this->data['error_' . $key] = $value;
+					
+					}
+					
+					$this->data['error'] = 'Kaydınız sırasında hatalar oluştu. Lütfen kontrol ediniz.';
+				
+				}
+			
+				
+				// contact informations
+				
+				$this->data['contact_name'] 		= $this->customer->get('firstname') . ' ' . $this->customer->get('lastname');
+				$this->data['contact_home_phone']	= ($this->customer->get('home_phone') ? '+90-' . $this->customer->get('home_phone') : '&nbsp;');
+				$this->data['contact_work_phone']	= ($this->customer->get('work_phone') ? '+90-' . $this->customer->get('work_phone') : '&nbsp;');
+				$this->data['contact_phone']		= ($this->customer->get('mobile_phone') ? '+90-' . $this->customer->get('mobile_phone') : '&nbsp;');
+				// end contact
+			
+				// options
+								
+				$this->data['options'] = $this->model_option->getCategoryOptions($query->row['category_id'], ($this->request->has('opt', 'post') ? $this->request->post('opt') : $this->model_option->getPostOptions($query->row['id'])));
+			
+				// end options
+				
+				
+				// post variables
+				
+				$this->data['publish_phone'] 		= ($this->request->post('publish_phone') == 'on' ? true : $query->row['publish_phone']);
+				$this->data['name'] 				= ($this->request->has('name', 'post') ? $this->request->post('name') : $query->row['name']);
+				$this->data['bold_title'] 			= ($this->request->post('bold_title') == 'on' ? true : $this->model_preserve->isPostBoldTitle($query->row['id']));
+				$this->data['description_type'] 	= ($this->request->has('description_type', 'post') && in_array($this->request->post('description_type'), array(1, 2)) ? $this->request->post('description_type') : $query->row['description_type']);
+				$this->data['description_standart'] = ($this->request->has('description_type', 'post') && $this->request->post('description_type') == 1 ? $this->request->post('description_standart') : ($query->row['description_type'] == 1 ? $query->row['description'] : false));
+				$this->data['description_advanced'] = ($this->request->has('description_type', 'post') && $this->request->post('description_type') == 2 ? $this->request->post('description_advanced') : ($query->row['description_type'] == 2 ? $query->row['description'] : false));
+				$this->data['price'] 				= ($this->request->has('price', 'post') ? $this->request->post('price') : number_format($query->row['price']));
+				$this->data['currency'] 			= ($this->request->has('currency', 'post') && in_array($this->request->post('currency'), array('TL', 'USD', 'EUR', 'GBP')) ? $this->request->post('currency') : $query->row['currency']);
+				
+				if ( $this->request->post('opt') && $this->data['options'] ) {
+				
+					$post_options = $this->request->post('opt');
+					
+					foreach ( $this->data['options'] as $opt_key => $opt_value ) {
+					
+						if ( $opt_value['type'] == 'text' ) {
+						
+							if ( isset($post_options[$opt_key]) ) {
+							
+								$this->data['options'][$opt_key]['value'] = $post_options[$opt_key];
+							
+							}
+						
+						} else if ( $opt_value['type'] == 'select' ) {
+						
+							if ( isset($post_options[$opt_key]) ) {
+							
+								if ( $opt_value['values'] ) {
+								
+									foreach ( $opt_value['values'] as $val_key => $val_val ) {
+									
+										if ( $val_val['id'] == $post_options[$opt_key] ) {
+										
+											$this->data['options'][$opt_key]['values'][$val_key]['selected'] = true;
+										
+										}
+									
+									}
+								
+								}
+							
+							}
+						
+						}
+					
+					}
+				
+				}
+				
+				// LOCATIONS
+				
+				$post_location = $this->db->query("SELECT * FROM post_location WHERE post_id = '".$query->row['id']."'");
+				
+				if ( $post_location->rows ) {
+				
+					$post_location = $post_location->row;
+				
+				} else {
+				
+					$post_location = array();
+				
+				}
+				
+				$this->data['map_location'] = array();
+				
+				$this->data['map_lat'] 	= ($this->request->has('map_lat', 'post') ? $this->request->post('map_lat') : (isset($post_location['post_id']) ? $post_location['lat'] : false));
+				$this->data['map_lon'] 	= ($this->request->has('map_lon', 'post') ? $this->request->post('map_lon') : (isset($post_location['post_id']) ? $post_location['lon'] : false));			
+				
+				// city
+				
+				$this->data['cities'] = array();
+				
+				if ( $this->request->has('city_id', 'post') ) {
+				
+					$city_id = $this->request->post('city_id');
+				
+				} else if ( isset($post_location['post_id']) ) {
+				
+					$city_id = $post_location['city_id'];
+				
+				} else {
+				
+					$city_id = $this->customer->get('city_id');
+				
+				}
+				
+				$this->data['cities'] = $this->model_location->getCities();
+				
+				if ( $this->data['cities'] ) {
+				
+					foreach ( $this->data['cities'] as $city_key => $city_value ) {
+					
+						if ( $city_value['id'] == $city_id ) {
+							
+							$this->data['cities'][$city_key]['selected'] = true;
+							
+							$this->data['map_location'] = array(
+								'map_lat' 		=> $this->data['cities'][$city_key]['lat'],
+								'map_lon' 		=> $this->data['cities'][$city_key]['lon'],
+								'map_zoom' 		=> $this->data['cities'][$city_key]['zoom'],
+								'map_marker'	=> false
+							);
+						
+						}
+					
+					}
+				
+				}		
+					
+				// end city
+				
+				// town
+				
+				if ( $this->request->has('town_id', 'post') ) {
+				
+					$town_id = $this->request->post('town_id');
+				
+				} else if ( isset($post_location['post_id']) ) {
+				
+					$town_id = $post_location['town_id'];
+				
+				}	
+
+				$this->data['towns'] = $this->model_location->getTowns($city_id);
+				
+				if ( $this->data['towns'] && isset($town_id) ) {
+				
+					foreach ( $this->data['towns'] as $town_key => $town_value ) {
+					
+						if ( $town_value['id'] == $town_id ) {
+							
+							$this->data['towns'][$town_key]['selected'] = true;
+							
+							$this->data['map_location'] = array(
+								'map_lat' 		=> $this->data['towns'][$town_key]['lat'],
+								'map_lon' 		=> $this->data['towns'][$town_key]['lon'],
+								'map_zoom' 		=> $this->data['towns'][$town_key]['zoom'],
+								'map_marker'	=> false
+							);
+						
+						}
+					
+					}
+				
+				}
+				
+				// end town
+				
+				// district
+
+				if ( $this->request->has('quarter_id', 'post') ) {
+				
+					$quarter_id = $this->request->post('quarter_id');
+				
+				} else if ( isset($post_location['quarter_id']) ) {
+				
+					$quarter_id = $post_location['quarter_id'];
+				
+				}
+
+				$this->data['quarters'] = $this->model_location->getDistricts((isset($town_id) ? $town_id : false));
+				
+				if ( $this->data['quarters'] && isset($quarter_id) ) {
+				
+					foreach ( $this->data['quarters'] as $quarter_key => $quarter_value ) {
+					
+						if ( $quarter_value['values'] ) {
+						
+							foreach ( $quarter_value['values'] as $qv_key => $qv_value ) {
+							
+								if ( $qv_value['id'] == $quarter_id ) {
+									
+									$this->data['quarters'][$quarter_key]['values'][$qv_key]['selected'] = true;
+									
+									$this->data['map_location'] = array(
+										'map_lat' 		=> $this->data['quarters'][$quarter_key]['values'][$qv_key]['lat'],
+										'map_lon' 		=> $this->data['quarters'][$quarter_key]['values'][$qv_key]['lon'],
+										'map_zoom' 		=> $this->data['quarters'][$quarter_key]['values'][$qv_key]['zoom'],
+										'map_marker'	=> false
+									);
+								
+								}							
+							
+							}
+						
+						}
+
+					}
+				
+				}	
+				
+				// end district
+				
+				if ( $this->data['map_lat'] && $this->data['map_lon'] ) {
+				
+					$this->data['map_location']['map_lat'] 		= $this->data['map_lat'];
+					$this->data['map_location']['map_lon'] 		= $this->data['map_lon'];
+					$this->data['map_location']['map_zoom'] 	= 16;
+					$this->data['map_location']['map_marker'] 	= true;
+				
+				}
+				
+				$this->data['search_address_url'] 	= $this->url->link('_ajax_services', 'getAddress');
+				$this->data['get_town_url'] 		= $this->url->link('_ajax_services', 'getTowns');
+				$this->data['get_district_url'] 	= $this->url->link('_ajax_services', 'getDistricts');
+				
+				// END LOCATIONS
+				
+				// ATTRIBUTES
+
+				$this->data['attributes'] = $this->model_attribute->getCategoryAttributes($query->row['category_id'], ($this->request->has('attributes', 'post') ? $this->request->post('attributes') : $this->model_attribute->getPostAttributes($query->row['id'])));
+				
+				// END ATTRIBUTES
+				
+				// PHOTO
+				
+				$images = $this->model_post->getPostImages((int)$this->request->get('postId'));
+				
+				$this->data['images'] =  array();
+				
+				if ( $images ) {
+				
+					$this->load->model('image');
+					
+					foreach ( $images as $image ) {
+					
+						$this->data['images'][] = array(
+						
+							'image' 	=> $image['image'],
+							'preview'	=> $this->model_image->resize($image['image'], 78, 66)
+							
+						);
+					
+					}
+				
+				
+				}
+				
+				// END PHOTO
+				
+				// CONFIRMATION
+
+				$this->data['confirmation'] = ($this->request->post('confirmation') == 'on' ? true : false);
+				
+				// END CONFIRMATION
+				
+				// end post
+			
+				$this->data['category_path'] 	= $query->row['path'];
+				$this->data['change_category'] 	= $this->url->link('add_post', false, array('category' => $category->current['tag']), array('postId' => (int)$this->request->get('postId')));
+				$this->data['action_url'] 		= $this->url->link('add_post', false, array('category' => $category->current['tag']), array('postId' => (int)$this->request->get('postId'), 'step' => 2));
+				$this->data['captcha_url'] 		= $this->url->link('_ajax_services', 'captcha');
+				$this->data['upload_image_url'] = $this->url->link('_ajax_services', 'uploadPostImage');
+				$this->data['save_image_url'] 	= $this->url->link('_ajax_services', 'savePostImages', array(), array('postId' => (int)$this->request->get('postId')));
+                $this->data['edit_contact'] 	= $this->url->link('account', 'edit', array(), array("ref" => (@$_SERVER["REQUEST_URI"])));
+                
+			} else {
+			
+				return $this->forward('error');
+			
+			}
+			
+			$this->template = 'add_post_step2.html';
+			
+		} else if ( $step == 3 ) {
+            
+            $this->load->model('category');
+            $this->load->model('post');
+            $this->load->model('location');
+            $this->load->model('image');
+            $this->load->model('option');
+            $this->load->model('attribute');
+          
+			$query = $this->db->query("SELECT p.* FROM post p LEFT JOIN post_category pc ON p.id = pc.post_id WHERE p.id = '".(int)$this->request->get('postId')."' AND p.customer_id = '".$this->customer->get('id')."' AND pc.category_id = '".$category->current['id']."' AND p.status = '-1' GROUP BY p.id");
+			
+			if ( $query->rows ) {
+                 
+                $post = $this->model_post->getPost((int)$this->request->get('postId'));
+                
+                if ( $this->config->get('estate_parent_id') == $category->parent['id'] ) {
+
+                    $this->data['p_cat_path'] 		= $this->model_post->doEstateTitle($this->model_post->parseCategory($post['category_path']));
+                    $this->data['p_cat_path_model'] = false;
+
+                } else if ( $this->config->get('vehicle_parent_id') == $category->parent['id'] ) {
+
+                    $vpaths = $this->model_post->doVehicleTitle($this->model_post->parseCategory($post['category_path']));
+
+                    $this->data['p_cat_path'] 		= (isset($vpaths[0]) && isset($vpaths[1]) ? $vpaths[0] . ' ' . $vpaths[1] : false);
+                    $this->data['p_cat_path_model'] = (isset($vpaths[2]) ? $vpaths[2] : false);
+
+                }               
+                
+                $this->data['post_id'] 				= $post['id'];
+                $this->data['post_title'] 			= $post['name'];
+                $this->data['post_price'] 			= number_format($post['price']) . ' ' . $post['currency'];
+                $this->data['post_published_data'] 	= date('d.m.Y', strtotime($post['date_published']));
+                $this->data['post_description'] 	= $post['description'];
+                $this->data['post_contact_name'] 	= $post['contact_name'];
+                $this->data['post_address'] 		= $this->model_post->getPostLocation($post['id'], ' / ');
+                $this->data['post_publish_phone'] 	= $post['publish_phone'];                
+                $this->data['post_is_active'] 		= ($post['status'] == 1 && strtotime($post['date_published']) > strtotime(date('Y-m-d') . ' - 3 months') ? true : false);
+   
+                $phones = Array();
+
+                ($post['mobile_phone'] != '' ? array_push($phones, $post['mobile_phone']) : false);
+                ($post['work_phone'] != '' ? array_push($phones, $post['work_phone']) : false);
+                ($post['home_phone'] != '' ? array_push($phones, $post['home_phone']) : false);
+
+                $this->data['post_owner_phones'] 	= implode(' | ', $phones);    
+                
+                // post images
+
+                $images = $this->model_post->getPostImages($post['id']);
+
+                $this->data['post_images'] = array();
+
+                if ( $images ) {
+
+                    foreach ( $images as $image ) {
+
+                        $this->data['post_images'][] = array(
+
+                            'thumb' => $this->model_image->resize($image['image'], 93, 59),
+                            'big' 	=> $this->model_image->resize($image['image'], 400, 306),
+
+                        );
+
+                    }
+
+                } else {
+
+                    $this->data['post_images'][] = array(
+
+                        'thumb' => $this->model_image->resize(false, 93, 59),
+                        'big' 	=> $this->model_image->resize(false, 400, 306),
+
+                    );			
+
+                }	
+
+                // post options
+
+                $this->data['post_options'] 	= $this->model_option->getCategoryOptions($query->row["category_id"], $this->model_option->getPostOptions($post['id']));
+
+                // post attributes
+
+                $this->data['post_attributes'] 	= $this->model_attribute->getCategoryAttributes($query->row["category_id"], $this->model_attribute->getPostAttributes($post['id']));
+
+                $this->data['prev_url'] 		= $this->url->link('add_post', false, array('category' => $category->current['tag']), array('postId' => (int)$this->request->get('postId'), 'step' => 2));
+                
+                $this->data['next_url'] 		= $this->url->link('add_post', false, array('category' => $category->current['tag']), array('postId' => (int)$this->request->get('postId'), 'step' => 4));
+                
+
+			} else {
+			
+				return $this->forward('error');
+			
+			}			
+		
+			$this->template = 'add_post_step3.html';            
+            
+        } else if ( $step == 4 ) {
+		
+			$this->load->model('preserve');
+			$this->load->model('post');
+			$this->load->model('option');
+		
+			$query = $this->db->query("SELECT p.* FROM post p LEFT JOIN post_category pc ON p.id = pc.post_id WHERE p.id = '".(int)$this->request->get('postId')."' AND p.customer_id = '".$this->customer->get('id')."' AND pc.category_id = '".$category->current['id']."' AND p.status = '-1' GROUP BY p.id");
+			
+			if ( $query->rows ) {
+
+				if ( !$this->model_option->getPostOptions((int)$this->request->get('postId')) ) {
+				
+					$this->redirect($this->url->link('add_post', false, array('category' => $category->current['tag']), array('postId' => (int)$this->request->get('postId'), 'step' => 2)));
+				
+				}
+				
+				if ( $this->request->isPOST() && $this->request->post('preserve') ) {
+					
+					$this->model_post->clearPostPreserves((int)$this->request->get('postId'));
+					$this->model_post->addPostPreserve($this->request->post('preserve'), (int)$this->request->get('postId'));
+					
+					$this->load->library('json');
+					
+					exit(Json::encode(array('data' => $this->post_preserve_cart())));						
+				
+				}
+				
+				// PRESERVES
+				
+				$this->data['preserves'] = $this->model_preserve->getPreserves('post', $this->model_post->getPostPreserves((int)$this->request->get('postId'), true));
+			
+				// END PRESERVES
+				
+				$this->data['cart_data'] = $this->post_preserve_cart();
+				
+				$this->data['action_url'] 		= str_replace('&amp;', '&', $this->url->link('add_post', false, array('category' => $category->current['tag']), array('postId' => (int)$this->request->get('postId'), 'step' => 4)));				
+				$this->data['next_step_url'] 	= $this->url->link('add_post', false, array('category' => $category->current['tag']), array('postId' => (int)$this->request->get('postId'), 'step' => 5));				
+
+			} else {
+			
+				return $this->forward('error');
+			
+			}			
+		
+			$this->template = 'add_post_step4.html';
+		
+		} else if ( $step == 5 ) {
+		
+			$this->load->model('post');
+			$this->load->model('option');
+		
+			$query = $this->db->query("SELECT p.* FROM post p LEFT JOIN post_category pc ON p.id = pc.post_id WHERE p.id = '".(int)$this->request->get('postId')."' AND p.customer_id = '".$this->customer->get('id')."' AND pc.category_id = '".$category->current['id']."' AND p.status = '-1' GROUP BY p.id");
+			
+			if ( $query->rows ) {
+			
+				if ( !$this->model_option->getPostOptions((int)$this->request->get('postId')) ) {
+				
+					$this->redirect($this->url->link('add_post', false, array('category' => $category->current['tag']), array('postId' => (int)$this->request->get('postId'), 'step' => 2)));
+				
+				}			
+			
+				$this->model_post->doActivePost((int)$this->request->get('postId'));
+				
+				$this->model_post->doActivePostPreserve((int)$this->request->get('postId'), date('Y-m-d H:i:s'));
+                
+                $this->data["all_post"] = $this->url->link("my_posts");
+                
+                $this->data['action_url'] = str_replace('&amp;', '&', $this->url->link('add_post', false, array('category' => $category->current['tag']), array('step' => 1)));				
+                
+                $this->template = 'add_post_step5.html';
+
+			} else {
+			
+				$this->redirect(HTTP_SERVER);
+			
+			}			
+		
+		}
+		
+		$this->data['error'] = (isset($this->data['error']) ? $this->data['error'] : false);
+	
+		$this->children = array(
+			'header',
+			'menu',
+			'footer'
+		);		
+						
+		$this->response->set($this->render());		
+				
+	}
+	
+	private function post_preserve_cart () {
+	
+		$this->load->model('post');
+		
+		$results = $this->model_post->getPostPreserveCart((int)$this->request->get('postId'));
+		
+		if ( $results ) {
+		
+			$this->data['cart_data'] = $results;
+			
+			$this->template = 'preserve_cart.html';
+			
+			$html = $this->render();
+		
+		
+		} else {
+		
+			$html = '';
+		
+		}
+		
+		return $html;
+	
+	}
+	
+	private function validate () {
+	
+		if ( $this->request->post('captcha') != $this->session->get('captcha') ) {
+
+			$this->error['captcha'] = 'Doğrulama kodunu kontrol ediniz.';
+
+		}	
+		
+		if ( $this->request->post('confirmation') != 'on' ) {
+
+			$this->error['confirmation'] = 'Kullanım koşullarını kabul etmelisiniz.';
+
+		}	
+	
+		if ( !(int)$this->request->post('city_id') || !(int)$this->request->post('town_id') || !(int)$this->request->post('quarter_id') || !$this->request->post('map_lat') || !$this->request->post('map_lon') ) {
+		
+			$this->error['location'] = 'İlan konumu girilmelidir.';
+		
+		}
+	
+		if ( $this->request->post('opt') ) {
+			
+			foreach ( $this->request->post('opt') as $key => $value ) {
+			
+				if ( $value == '' || $value == 0 ) {
+				
+					$this->error['option'] = 'İlan özellikleri boş bırakılmamalıdır.';
+				
+				}
+			
+			}
+		
+		} else {
+		
+			$this->error['option'] = 'İlan özellikleri boş bırakılmamalıdır.';
+		
+		}
+	
+		if ( !in_array($this->request->post('currency'), array('TL', 'USD', 'EUR', 'GBP')) ) {
+
+			$this->error['price'] = 'Hatalı fiyat birimi.';
+
+		}	
+		
+		if ( strlen(trim($this->request->post('price'))) < 2 ) {
+
+			$this->error['price'] = 'Fiyat alanı boş bırakılmamalıdır.';
+
+		}	
+	
+		if ( $this->request->post('description_type') == 1 ) {
+
+			if ( strlen(trim($this->request->post('description_standart'))) < 5 ) {
+
+				$this->error['description'] = 'İlan açıklamasını giriniz.';
+
+			}		
+		
+		} else if ( $this->request->post('description_type') == 2 ) {
+
+			if ( strlen(trim($this->request->post('description_advanced'))) < 5 ) {
+
+				$this->error['description'] = 'İlan açıklamasını giriniz.';
+
+			}		
+		
+		} else {
+
+			$this->error['description'] = 'İlan açıklamasını giriniz.';	
+		
+		}	
+		
+		if ( strlen(trim($this->request->post('name'))) < 5 ) {
+
+			$this->error['name'] = 'İlan başlığını giriniz.';
+
+		}
+
+		return ($this->error ? false : true);
+	
+	}
+
+}
+
+?>

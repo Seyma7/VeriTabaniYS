@@ -1,0 +1,41 @@
+{$header}
+{$menu}
+<div id="content" class="specialBG">
+  <div class="container postDetail">
+      <div class="row">
+        <div class="box col-xs-12 col-md-10 col-md-offset-1 noPadding">
+
+          {if isset($headLine)}<span class="col-xs-12 headLine">{$headLine}</span>{/if}
+          {if $items}
+                  {foreach from = $items item = value key = k}
+                  <div class="col-xs-12 itemListGroup {if $k%2==1}x2{/if} noPadding">
+                    {foreach from = $value item = i key = k}
+                    <div class="col-xs-6 col-sm-2 itemList noPadding">
+                    <a href="{$i.url}" title="{$i.name}" target="">
+                      <div class="item">
+                        <div class="image">
+                            <img class="lazy" data-original="{$i.image}" title="{$i.name}" alt="{$i.name}">
+                            {if $i.video}<div class="videoBox"><div class="playIcon small"></div></div>{/if}
+                        </div>
+                        <div class="itemTitle">
+                          <h2>{$i.name_cut}</h2>
+                        </div>
+                      </div>
+                    </a>
+                    </div>
+                    {/foreach}
+                  </div>
+                  {/foreach}
+
+              {if $pagination}
+              <div class="col-xs-12 post_pagination">{$pagination}</div>
+              {/if}
+          {else}
+          <div class="col-xs-12 resultInfo">{if isset($resultInfo)}{$resultInfo}{else}Kategoriye ait kayıt bulunamadı.{/if}</div>
+          {/if}
+
+        </div>
+      </div>
+  </div>
+</div>
+{$footer}

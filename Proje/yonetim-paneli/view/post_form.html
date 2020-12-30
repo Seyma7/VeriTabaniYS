@@ -1,0 +1,426 @@
+﻿{$header}
+{if isset($error)}<div class="error_gen marg10"><b>Hata:</b> {$error}</div>{/if}
+<script type="text/javascript" src="view/js/jquery-ui-1.8.23.custom.min.js"></script>
+<link rel="stylesheet" type="text/css" href="view/css/flick/jquery-ui-1.8.23.custom.css" />
+<script type="text/javascript" src="view/js/ajaxupload.js"></script>
+<script src="view/js/ckeditor/ckeditor.js"></script>
+{*
+<script type="text/javascript" src="view/js/tiny_mce/tiny_mce.js"></script>
+<script type="text/javascript">
+tinyMCE.init({
+        // General options
+        mode : "exact",
+        theme : "advanced",
+		elements: "description",
+        plugins : "autolink,lists,spellchecker,pagebreak,layer,table,save,advhr,advimage,advlink,emotions,iespell,inlinepopups,insertdatetime,preview,media,searchreplace,print,contextmenu,paste,directionality,fullscreen,noneditable,visualchars,nonbreaking,xhtmlxtras,template",
+		language: "tr",
+
+        // Theme options
+        theme_advanced_buttons1 : "code,preview,|,cut,copy,paste,link,unlink,|,bold,italic,underline,strikethrough,|,justifyleft,justifycenter,justifyright,justifyfull,|,forecolor,backcolor,fontselect,fontsizeselect",
+		theme_advanced_toolbar_location : "top",
+        theme_advanced_toolbar_align : "left",
+        theme_advanced_statusbar_location : "bottom",
+        theme_advanced_resizing : true,
+
+        // Skin options
+        skin : "o2k7",
+        skin_variant : "silver",
+
+		width : "700",
+		height : "250",
+
+        // Replace values for the template plugin
+        template_replace_values : {
+                username : "Some User",
+                staffid : "991234"
+        }
+});
+</script>*}
+<div class="box_head"></div>
+<div class="box_body">
+	<div class="heading_title">{$title}</div>
+	<div class="buttons marg10">
+		<a onClick="$('form#save').submit();" class="button">Kaydet</a>
+		<a href="{$cancel}" class="button">Vazgeç</a>
+		{if $delete}
+		<a href="{$delete}" class="button">Kayıt Sil</a>
+		{/if}
+		<span class="quick">Hızlı işlem:
+			<select name="" onChange="$('#stayOnPage').val($(this).val()); $('form#save').submit();" class="input1" style="width: 200px">
+				<option value="0">Bir işlem seçin</option>
+				<option value="new">Kaydet & Yeni Ekle</option>
+				<option value="edit">Kaydet & Sayfada Kal</option>
+			</select>
+		</span>
+	</div>
+	<form action="{$action}" method="post" autocomplete="off" id="save" name="save">
+		<input type="hidden" name="stayOnPage" id="stayOnPage" value="0" />
+		<input type="hidden" name="video[status]" value="{if isset($video.status)}{$video.status}{else}0{/if}"/>
+		<div id="tabs" class="htabs">
+			<a href="#tab_general">Kategori Bilgileri</a>
+			<a href="#tab_description">Haber Bilgileri</a>
+			<a href="#tab_property">Haber Özellik</a>
+			<a href="#tab_video">Habere Video Ekle</a>
+			<a href="#tab_fotograf">Haber Görseli Ekle</a>
+		</div>
+
+		<div id="tab_general">
+			<table class="list">
+				<tr class="head">
+					<td width="5">&nbsp;</td>
+					<td colspan="2">Haber Kategorisi</td>
+				</tr>
+				<tr class="gridrow">
+					<td></td>
+					<td class="field1"><span class="required">*</span> Kategori Seçin:</td>
+					<td>
+						<div id="select_menus">
+							{if $categories}
+								{foreach from = $categories item = j}
+									{if $j}
+										<select name="category" class="select_menu" size="12">
+											{foreach from = $j item = i}
+												<option  {foreach from = $category_list item = c}{if $c.id == $i.id}selected{/if}{/foreach} value="{$i.id}">{$i.name}</option>
+											{/foreach}
+										</select>
+									{/if}
+								{/foreach}
+							{/if}
+						</div>
+					</td>
+				</tr>
+			</table>
+		</div>
+
+		<div id="tab_description">
+			<table class="list">
+				<tr class="head">
+					<td width="5">&nbsp;</td>
+					<td colspan="2">Haber Bilgileri</td>
+				</tr>
+				<tr class="gridrow">
+					<td></td>
+					<td class="field1"><span class="required">*</span> Haber Lokasyon:</td>
+					<td>
+						<select name="location" class="input1">
+						<option value="0">Seçiniz</option>
+						{if $location_list}{foreach from = $location_list item = i}
+						<option value="{$i.id}"{if $location == $i.id} selected{/if}>{$i.name}</option>{/foreach}{/if}
+						</select>
+          </td>
+				</tr>
+				<tr class="gridrow">
+					<td></td>
+					<td class="field1"><span class="required">*</span> Başlık:</td>
+					<td><input type="text" name="name" value="{$name}" class="input1 stringCounter" maxL="100" minL="10"/></td>
+				</tr>
+				<tr class="gridrow">
+					<td></td>
+					<td class="field1"><span class="required">*</span> İçerik:</td>
+					<td><textarea class="ckeditor" name="description" id="description" class="input1" style="font-size: 11px;" rows="5">{$description}</textarea></td>
+				</tr>
+				<tr class="gridrow">
+					<td></td>
+					<td class="field1">Sıra:</td>
+					<td><input type="text" name="sort_order" value="{$sort_order}" class="input1" /></td>
+				</tr>
+				<tr class="gridrow">
+					<td></td>
+					<td class="field1">Yayınlanma Durumu:</td>
+					<td>
+						<select name="status" class="input1">
+						<option value="0">Seçiniz</option>
+						{if $statuses}{foreach from = $statuses item = i}
+						<option value="{$i.id}"{if $status == $i.id} selected{/if}>{$i.name}</option>{/foreach}{/if}
+						</select>
+					</td>
+				</tr>
+			</table>
+		</div>
+
+    <div id="tab_property">
+			<table class="list">
+				<tr class="head">
+					<td width="5">&nbsp;</td>
+					<td colspan="2">Haber Özellik</td>
+				</tr>
+				<tr class="gridrow">
+					<td></td>
+					<td class="field1">Habere Özellik Ekleyin:</td>
+					<td>
+						 {if $preserves}
+                {foreach from = $preserves item = i}
+                <p>
+                  <label><input type="checkbox" {if $i.selected || ( $i.code == 'home' && $method == 'insert' )} checked {/if}  name="preserve[][preserve_id]" value="{$i.id}"/> {$i.name} ({$i.description})</label>
+                </p>
+                {/foreach}
+             {/if}
+					</td>
+				</tr>
+			</table>
+		</div>
+
+		<div id="tab_video">
+			<table class="list">
+				<tr class="head">
+					<td width="5">&nbsp;</td>
+					<td colspan="2">Video Bilgileri (İsteğe Bağlı)</td>
+				</tr>
+				<tr class="gridrow">
+					<td></td>
+					<td class="field1"><a href="javascript::" id="addVideo" class="button"> {if !isset($video.status) ||  $video.status == 0}Video Ekle{else}İptal Et{/if}</a></td>
+					<td>
+					</td>
+				</tr>
+				<tr class="gridrow upVideo"  {if !isset($video.status) ||  $video.status == 0}style='display:none;'{/if}>
+					<td></td>
+					<td class="field1"><span class="required">*</span> Video Kaynağı:</td>
+					<td>
+						<select name="video[source]" class="input1">
+							<option  value="0">Seçiniz</option>
+							{if $video_list}
+								{foreach from = $video_list item = i}
+									<option {if isset($video.status) && $video.source == $i.id}selected{/if} value="{$i.id}">{$i.name}</option>
+								{/foreach}
+							{/if}
+						</select>
+					</td>
+				</tr>
+				<tr class="gridrow upVideo"  {if !isset($video.status) ||  $video.status == 0}style='display:none;'{/if}>
+					<td></td>
+					<td class="field1">Video Başlığı (İsteğe Bağlı):</td>
+					<td><input type="text" name="video[name]" value="{if isset($video.status)}{$video.name}{/if}" class="input1" /></td>
+				</tr>
+				<tr class="gridrow upVideo"  {if !isset($video.status) ||  $video.status == 0}style='display:none;'{/if}>
+					<td></td>
+					<td class="field1"><span class="required">*</span> Video URL Bilgisi:</td>
+					<td><input type="text" name="video[url]" value="{if isset($video.status)}{$video.url}{/if}" class="input1" /></td>
+				</tr>
+			</table>
+		</div>
+
+		<div id="tab_fotograf">
+			<table class="list">
+				<tr class="head">
+					<td width="5">&nbsp;</td>
+					<td colspan="2">Resim Yükle</td>
+				</tr>
+				<tr class="gridrow">
+					<td></td>
+					<td class="field1"><span class="required">*</span> Haber Resim (en az 1 adet):</td>
+					<td>
+						<div id="fotograf-center">
+							<div id="fotograf-upload"></div>
+							<div id="fotograf-upload-loading"></div>
+							<div id="status"></div>
+							<div class="clear"></div>
+							<div id="upload-img">
+								{if $images}{foreach from = $images item = i}
+								<label>
+									<div id="img-browse">
+										<div class="img">
+											<img src="{$i.preview}" />
+										</div>
+										<input name="current_image" type="radio" value="{$i.image}" />
+										<input name="image[]" item="0" type="hidden" value="{$i.image}" />
+									</div>
+								</label>
+								{/foreach}{/if}
+								<input type="hidden" name="image_selected" value="" />
+							</div>
+							<div class="clear"></div>
+							<div id="img-edit" style="display: {if $images}block{else}none{/if};">
+								<div class="secili-resim">Seçili olan resmi: </div>
+								<div class="ana-resim-yap"><input name="" onClick="doMainImage();" type="button" /></div>
+								<div class="resmi-sil"><input name="" onClick="deleteImage();" type="button" /></div>
+								<div class="geriye-tasi"><input name="" onClick="imagePrev()" type="button" /></div>
+								<div class="ileriye-tasi"><input name="" onClick="imageNext()" type="button" /></div>
+							</div>
+						</div>
+					</td>
+				</tr>
+			</table>
+		</div>
+
+		<div class="clear"></div>
+	</form>
+</div>
+
+    <script type="text/javascript">
+		{literal}
+			CKEDITOR.replace('description',{
+				filebrowserBrowseUrl: 'view/js/browser/browse.php',
+				filebrowserImageBrowseUrl: 'view/js/browser/browse.php?type=Images',
+				filebrowserUploadUrl: 'view/js/uploader/upload.php',
+				filebrowserImageUploadUrl: 'view/js/uploader/upload.php?type=Images',
+				filebrowserWindowWidth: '50',
+				filebrowserWindowHeight: '50',
+				filebrowserBrowseUrl: 'view/js/ckfinder/ckfinder.html',
+				filebrowserImageBrowseUrl: 'view/js/ckfinder/ckfinder.html?Type=Images',
+				filebrowserFlashBrowseUrl: 'view/js/ckfinder/ckfinder.html?Type=Flash',
+				filebrowserUploadUrl: 'view/js/ckfinder/core/connector/php/connector.php?command=QuickUpload&type=Files',
+				filebrowserImageUploadUrl: 'view/js/ckfinder/core/connector/php/connector.php?command=QuickUpload&type=Images',
+				filebrowserFlashUploadUrl: 'view/js/ckfinder/core/connector/php/connector.php?command=QuickUpload&type=Flash'
+			});
+		{/literal}
+    </script>
+<script type="text/javascript">
+$(window).load(function(){
+	$('#tabs a').tabs();
+});
+
+$('#addVideo').live('click', function(){
+	var upVideoStatus	=	parseInt($("input[name='video[status]']").val());
+
+	if( upVideoStatus == 1 || upVideoStatus == 0 ){
+		$('.upVideo').toggle();
+		if(upVideoStatus == 1){
+			$('#addVideo').html("Video Ekle");
+			$("input[name='video[status]']").attr('value',0);
+		}else{
+			$('#addVideo').html("İptal Et");
+			$("input[name='video[status]']").attr('value',1);
+		}
+	}
+});
+
+
+function doMainImage () {
+	$('input[name="image_selected"]').val($('input[name="current_image"]:checked').val());
+}
+
+function deleteImage () {
+	$('input[name="current_image"]:checked').parent().parent().remove();
+}
+
+function imageNext () {
+	var selected_item 	= $('input[name="current_image"]:checked').parent().parent();
+	var next_item 		= $(selected_item).next();
+
+	if ( $(next_item) ) {
+
+		$(next_item).after($(selected_item));
+
+	}
+}
+
+
+function imagePrev () {
+	var selected_item 	= $('input[name="current_image"]:checked').parent().parent();
+	var prev_item 		= $(selected_item).prev();
+
+	if ( $(prev_item) ) {
+
+		$(prev_item).before($(selected_item));
+
+	}
+}
+
+new AjaxUpload('#fotograf-upload', {
+	action: '{$upload_image_url}',
+	name: 'image',
+	autoSubmit: false,
+	responseType: 'json',
+	onChange: function(file, extension) {
+
+		if ( $('input[name="image[]"]').length < 10 ) {
+
+			 this.submit();
+
+		} else {
+
+			alert('Toplam 10 adet resim yükleyebilirsiniz.');
+
+		}
+
+	},
+	onSubmit: function(file, extension) {
+
+		$('#fotograf-upload').hide();
+		$('#fotograf-upload-loading').show();
+
+	},
+	onComplete: function(file, json) {
+
+		$('#fotograf-upload-loading').hide();
+		$('#fotograf-upload').show();
+
+		if ( json.error ) {
+
+			alert(json.error);
+
+		}
+
+		if ( json.image && json.preview ) {
+
+			$('#img-edit').css('display', 'block');
+
+			$('#upload-img').append('<label><div id="img-browse"><div class="img"><img src="' + json.preview + '" /></div><input name="current_image" type="radio" value="' + json.image + '" /><input name="image[]" type="hidden" item="1" value="' + json.image + '" /></div></label>');
+
+		}
+
+	}
+});
+</script>
+
+
+<script type="text/javascript">
+
+$('#select_menus select').live('change', function(){
+
+	var select = $(this);
+
+	$.ajax({
+		type		: "POST",
+		url			: '{$categories_url}',
+		dataType	: 'JSON',
+		data		: 'parent_id=' + $(select).val(),
+		beforeSend	: function () {
+
+			$('#select_menus select').attr('disabled', 'disabled');
+
+			$.each ( $('#select_menus select'), function(k, v) {
+
+				if ( k > $(select).index() ) {
+
+					$(v).remove();
+
+				}
+
+			});
+
+		},
+		success		: function (j) {
+
+			$('#selected_category').html(j.path);
+
+			if(j.status == 1){
+
+				var html = '<select name="category" class="select_menu" size="12">';
+
+				if(j.data){
+
+					$.each(j.data, function(v, k){
+
+						html += '<option value="' + k.id + '">' + k.name + '</option>';
+
+					});
+
+				}
+
+				html += '</select>';
+
+				$('#select_menus').append(html);
+
+			}
+
+			$('#select_menus select').removeAttr('disabled');
+
+		},
+		error		: function () {
+			return;
+		}
+	});
+});
+</script>
+{$footer}

@@ -1,0 +1,906 @@
+<?php
+
+class ControllerCorporatePackages extends Controller {
+    
+    public function index() {
+        
+        if ( $this->request->isPOST() ) {
+            
+            $packages = $this->config->get("corppackages");
+            
+            if ( !isset($packages[$this->request->post("package")]) ) {
+                
+                $this->redirect($this->url->link("corporate_packages"));
+                
+            }
+            
+            if ( !$this->customer->isLogged() ) {
+                
+                $this->redirect($this->url->link("login", false, array(), array("ref" => @$_SERVER["REQUEST_URI"])));
+                
+            }
+			
+            if ( !in_array($this->request->post("period"), array(1, 3)) ) {
+                
+                $this->redirect($this->url->link("corporate_packages"));
+                
+            }	
+			
+			$result = $this->db->query("SELECT id FROM store WHERE customer_id = '".$this->customer->get("id")."' AND type = '".$this->db->escape($this->request->post("package"))."'");
+            
+			if ( $result->rows ) {
+				
+				$this->session->set("error", "Seçtiğiniz kurumsal paket için aktif hesabınız bulunmaktadır.");
+				
+				$this->redirect($this->url->link("corporate_packages"));
+				
+			}
+			
+            $data = array(
+                "name"      => $this->request->post("package"), 
+				"period"	=> $this->request->post("period"),
+                "doping"    => false,
+				"taksit"	=> "",
+                "store"     => array(
+                    "name"  => "",
+                    "about" => "",
+                    "slug"  => "",
+                    "logo"  => ""
+                )
+            );
+            
+            $this->session->set("corppack", $data);
+            
+            $this->redirect($this->url->link("corporate_packages", "detail"));
+            
+        }
+        
+        $this->document->setTitle("Kurumsal Paketler");
+        
+        $this->data["action"] = $this->url->link("corporate_packages");
+		
+        if ( $this->session->has("error") ) {
+            
+            $this->data["error"] = $this->session->get("error");
+            
+            $this->session->delete("error");
+            
+        }		
+        
+		$this->template = 'corporate_packages.html';
+		$this->children = array(
+			'header',
+			'menu',
+			'footer',
+		);		
+						
+		$this->response->set($this->render());        
+        
+    }
+    
+    public function detail () {
+        
+        if ( !$this->session->has("corppack") ) {
+            
+            $this->redirect($this->url->link("corporate_packages"));
+            
+        } 
+        
+        $corppack  = $this->session->get("corppack");
+        
+        if ( $this->request->isPOST() ) {
+            
+            $error = false;
+            
+			$path_	= "corporate_logos/" . date("Y/m/d"); 
+            $path	= 'upload/' . $path_;
+            
+            if ( !upload_date_path_control ( $path_ ) ) {
+
+                $error	= "İşleminizi şuanda gerçekleştiremiyoruz. Lütfen daha sonra telrar deneyin.";
+
+            } else {
+                
+                $this->load->model('upload');
+                
+                $image 		= (isset($_FILES['logo']) && $_FILES['logo']['tmp_name'] ? $_FILES['logo'] : false);
+
+                $filename	= md5(time().rand(0, 1000).uniqid());
+
+                $allowed = array(
+                    'image/jpeg',
+                    'image/pjpeg',
+                    'image/gif',
+					'image/png'
+                );			
+
+                $result = $this->model_upload->upload($image, $filename, $path, 2097152, $allowed);
+                
+                if ( isset($result["error"]) ) {
+                    
+                    $error = $result['error'];
+                    
+                } else {
+                    
+                    $file = $result['file'];
+                    
+                }
+                
+            }  
+            
+            $query = $this->db->query("SELECT id FROM store WHERE slug = '".$this->db->escape($this->request->post("slug"))."'");
+            
+            if ( $query->rows ) {
+                
+                $error = "<b>Mağaza URL</b> sistemde kayıtlı.";
+                
+            }
+  
+            if ( !preg_match('/^[a-z][-a-z0-9]*$/', $this->request->post("slug")) ) {
+                
+                $error = "<b>Mağaza URL seçimi</b> formatı geçerli değil. Örnek: kaya-emlak yada kaya-insaat";
+                
+            }           
+          
+            if ( strlen(str_replace(" ", "", $this->request->post("slug"))) < 5 || strlen(str_replace(" ", "", $this->request->post("slug"))) > 30 ) {
+                
+                $error = "<b>Mağaza URL seçimi</b> en az 5 en fazla 30 karakterli olmalıdır.";
+                
+            }             
+            
+            if ( strlen(str_replace(" ", "", $this->request->post("about"))) < 5 ) {
+                
+                $error = "Lütfen <b>Mağazanız hakkında</b> alanını doldurun.";
+                
+            }            
+            
+            if ( strlen(str_replace(" ", "", $this->request->post("name"))) < 5 ) {
+                
+                $error = "Lütfen en az 5 karakterli <b>Mağaza adı</b>' nı girin.";
+                
+            }                        
+            
+            if ( $error ) {
+                
+                $this->data["error"] = $error;
+                
+            } else {
+                
+                $corppack["store"] = array(
+                    "name"  => $this->request->post("name"),
+                    "about" => $this->request->post("about"),
+                    "slug"  => $this->request->post("slug"),
+                    "logo"  => $file                    
+                );
+                
+                $this->session->set("corppack", $corppack);
+                
+                $this->redirect($this->url->link("corporate_packages", "doping"));
+                
+            }
+            
+        }
+        
+        $this->document->setTitle("Mağaza İçeriği - Kurumsal Paketler");
+        
+        $packages = $this->config->get("corppackages");
+        
+        $package  = $packages[$corppack["name"]];
+        
+        $this->data["package_name"]     = $package["title"];
+        $this->data["package_duration"] = $package["duration"][$corppack["period"]]["text"];
+        
+        $this->data["name"]             = ( $this->request->post("name") ? $this->request->post("name") : @$corppack["store"]["name"] );
+        $this->data["about"]            = ( $this->request->post("about") ? $this->request->post("about") : @$corppack["store"]["about"] );
+        $this->data["slug"]             = ( $this->request->post("slug") ? $this->request->post("slug") : @$corppack["store"]["slug"] );
+        $this->data["logo"]             = @$corppack["store"]["logo"];
+        
+        $this->data["action"] = $this->url->link("corporate_packages", "detail");
+        
+  		$this->template = 'corporate_packages_detail.html';
+		$this->children = array(
+			'header',
+			'menu',
+			'footer',
+		);		
+						
+		$this->response->set($this->render());       
+        
+    }
+    
+    public function doping () {
+        
+        if ( !$this->session->has("corppack") ) {
+            
+            $this->redirect($this->url->link("corporate_packages", "detail"));
+            
+        } 
+        
+        $corppack  = $this->session->get("corppack"); 
+        
+        if ( !$corppack["store"]["name"] ) {
+            
+            $this->redirect($this->url->link("corporate_packages", "detail"));
+            
+        }
+        
+        if ( $this->request->isPOST() ) {
+            
+            $corppack["doping"] = $this->request->post("doping");
+            
+            $this->session->set("corppack", $corppack); 
+            
+            $this->redirect($this->url->link("corporate_packages", "payment"));
+            
+        }
+        
+       // _print($corppack);
+        
+        $this->document->setTitle("Gaz Ver - Kurumsal Paketler");
+        
+        $packages = $this->config->get("corppackages");
+        
+        $package  = $packages[$corppack["name"]];
+        
+        $this->data["corppack"]          = $corppack;
+        $this->data["package"]          = $package;
+        $this->data["package_name"]     = $package["title"];
+        $this->data["package_duration"] = $package["duration"][$corppack["period"]]["text"];        
+        
+        $this->data["action"] = $this->url->link("corporate_packages", "doping");
+        
+  		$this->template = 'corporate_packages_doping.html';
+		$this->children = array(
+			'header',
+			'menu',
+			'footer',
+		);		
+						
+		$this->response->set($this->render());        
+        
+    }
+    
+    public function payment () {
+        
+        if ( !$this->session->has("corppack") ) {
+            
+            $this->redirect($this->url->link("corporate_packages", "detail"));
+            
+        } 
+        
+        $corppack  = $this->session->get("corppack"); 
+        
+        if ( !$corppack["store"]["name"] ) {
+            
+            $this->redirect($this->url->link("corporate_packages", "detail"));
+            
+        }
+		
+		if ( $this->request->get("gaz-ver") == 'sil' ) {
+			
+			$corppack["doping"] = false;
+			
+			$this->session->set("corppack", $corppack);
+			
+			$this->redirect($this->url->link("corporate_packages", "payment"));
+			
+		}
+        
+        $this->document->setTitle("Ödeme Yap - Kurumsal Paketler");
+        
+        $packages = $this->config->get("corppackages");   
+        
+        $package  = $packages[$corppack["name"]];
+		
+		$package_duration = $packages[$corppack["name"]]["duration"][$corppack["period"]];
+        
+        $this->data["package_price"]    = number_format($package_duration["price"], 2);
+        $this->data["total_price"]      = number_format(( $corppack["doping"] ? $package_duration["priced"] : $package_duration["price"] ), 2);
+        
+        $this->load->library("gvp");
+        
+        $gvp = new GVP(true);
+        
+        $this->data["months"]   = $gvp->months();
+        $this->data["years"]    = $gvp->years();
+        
+        if ( $this->request->isPOST() ) {
+			
+			if ( $this->config->get("akpos_test") ) {
+				
+				$cc_number	= AKPOSTEST_CC_NUMBER;
+				$cc_cvv		= AKPOSTEST_CC_CVV;
+				$cc_year	= AKPOSTEST_CC_YEAR;
+				$cc_month	= AKPOSTEST_CC_MONTH;
+				$cc_cardtype= AKPOSTEST_CC_CARDTYPE;				
+				
+			} else {
+				
+				$cc_number	= $this->request->post("cc_no1").$this->request->post("cc_no2").$this->request->post("cc_no3").$this->request->post("cc_no4");
+				$cc_cvv		= $this->request->post("cc_cvv");
+				$cc_year	= $this->request->post("cc_year");
+				$cc_month	= $this->request->post("cc_month");
+				$cc_cardtype= $this->request->post("cc_cardtype");					
+				
+			}
+
+			if ( $this->request->post("installment") == 1 ) {
+				
+				$result = $this->db->query("SELECT id FROM bankbins WHERE bin = '" . substr($cc_number, 0, 6) . "'");
+				
+				if ( $result->rows ) {
+					
+					if ( !in_array($this->request->post("installment_count"), array(2, 4)) ) {
+
+						$this->session->set("error", "Yalnızca 2 ve 4 taksit seçeneğinden yararlanabilirsiniz.");
+
+						$this->redirect($this->url->link("corporate_packages", "payment"));					
+						
+					} else {
+						
+						$corppack["taksit"] = $this->request->post("installment_count");
+
+						$this->session->set("corppack", $corppack);					
+						
+					}					
+					
+				} else {
+					
+					$this->session->set("error", "Taksit seçeneği yalnızca Axess kartları için geçerlidir.");
+					
+					$this->redirect($this->url->link("corporate_packages", "payment"));
+					
+				}
+				
+			} 
+			
+			define("POS_RETURN_URL", $this->url->link("corporate_packages", "callback_AKPOS034639874s__"));
+
+			define("AMOUNT", $this->data["total_price"]);
+			define("ORDER_ID", strtoupper(uniqid("AF")));
+			define("RND", microtime());
+			define("STORE_TYPE", "3D");
+			define("HASHSTR", AKPOS_CLIENTID . ORDER_ID . AMOUNT . POS_RETURN_URL . POS_RETURN_URL . RND  . AKPOS_STOREKEY);
+			define("HASH", base64_encode(pack('H*',sha1(HASHSTR))));			
+			 
+			$ch = curl_init();
+			$data = array(
+				'pan'								=> $cc_number, 
+				'cv2'								=> $cc_cvv, 
+				'Ecom_Payment_Card_ExpDate_Year'	=> $cc_year, 
+				'Ecom_Payment_Card_ExpDate_Month'   => $cc_month, 
+				'cardType'							=> $cc_cardtype, 
+				'clientid'							=> AKPOS_CLIENTID, 
+				'amount'							=> AMOUNT, 
+				'oid'								=> ORDER_ID, 
+				'okUrl'								=> POS_RETURN_URL, 
+				'failUrl'							=> POS_RETURN_URL, 
+				'rnd'								=> RND, 
+				'hash'								=> HASH, 
+				'storetype'							=> STORE_TYPE, 
+				'lang'								=> "TR", 
+				'userid'							=> $this->customer->get("id"),
+				'email'								=> $this->customer->get("email"),
+				'description'						=> $package["title"] . ' ' . $package_duration["text"] . ( $corppack["doping"] ? " - " . $package["doping"]["title"] : false )
+			);
+			
+			foreach ( $data as $key => $value ) {
+				
+				array_push($data, "{$key}={$value}");
+				
+				unset($data[$key]);
+				
+			}
+			
+			$data = implode("&", $data);
+			
+			curl_setopt($ch, CURLOPT_URL, AKPOS_POSTLINK);
+			curl_setopt($ch, CURLOPT_POST, 1);
+			curl_setopt($ch, CURLOPT_POSTFIELDS, str_replace("&amp;", "&", $data));
+			//curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+			curl_setopt($ch, CURLOPT_REFERER, $this->url->link("corporate_packages", "payment"));
+			curl_setopt($ch, CURLOPT_USERAGENT, "Mozilla/4.0 (compatible; MSIE 5.01; Windows NT 5.0)");
+			curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 1); 
+			curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 1);			
+			curl_exec($ch); 
+			curl_close($ch);
+			
+			exit;
+            
+        }
+        
+        if ( $this->session->has("error") ) {
+            
+            $this->data["error"] = $this->session->get("error");
+            
+            $this->session->delete("error");
+            
+        }
+        
+        if ( $corppack["doping"] ) {
+            
+            $this->data["doping_price"]     = number_format($package["doping"]["price"], 2);
+            
+        }
+        
+        //_print($package);
+        $this->data["installment2"]     = number_format($this->data["total_price"] / 2, 2);
+        $this->data["installment4"]     = number_format($this->data["total_price"] / 4, 2);
+        $this->data["corppack"]         = $corppack;
+        $this->data["package"]          = $package;
+        $this->data["package_name"]     = $package["title"];
+        $this->data["package_duration"] = $package_duration["text"];        
+        
+        $this->data["action"] = $this->url->link("corporate_packages", "payment");
+		
+		$this->data["remove_doping"] = $this->url->link("corporate_packages", "payment", array(), array("gaz-ver" => 'sil'));
+        
+  		$this->template = 'corporate_packages_payment.html';
+		$this->children = array(
+			'header',
+			'menu',
+			'footer',
+		);		
+						
+		$this->response->set($this->render());        
+        
+    }  
+	
+	public function callback_AKPOS034639874s__ () {
+		
+        if ( !$this->session->has("corppack") ) {
+            
+            $this->redirect($this->url->link("corporate_packages", "detail"));
+            
+        } 
+        
+        $corppack  = $this->session->get("corppack"); 
+        
+        if ( !$corppack["store"]["name"] ) {
+            
+            $this->redirect($this->url->link("corporate_packages", "detail"));
+            
+        }	
+		
+		$error = false; 
+		
+		$hashparams 	= $this->request->post("HASHPARAMS");
+		$hashparamsval  = $this->request->post("HASHPARAMSVAL");
+		$hashparam 		= $this->request->post("HASH");
+		$storekey		= AKPOS_STOREKEY;
+		$paramsval		= "";
+		$index1			= 0;
+		$index2			= 0;
+
+		while($index1 < strlen($hashparams))
+		{
+			$index2 = strpos($hashparams,":",$index1);
+			$vl = $this->request->post(substr($hashparams,$index1,$index2- $index1));
+			if($vl == null)
+			$vl = "";
+			$paramsval = $paramsval . $vl; 
+			$index1 = $index2 + 1;
+		}
+		
+		$storekey = AKPOS_STOREKEY;
+		$hashval = $paramsval.$storekey;
+
+		$hash = base64_encode(pack('H*',sha1($hashval)));
+
+		if($paramsval != $hashparamsval || $hashparam != $hash) {	
+			
+			$error = "3D Güvenlik sayısal imza geçerli değil.";
+	
+		}
+		
+		if ( !$error ) {
+			
+			switch( $this->request->post('mdStatus') ) {
+				
+				case 1:
+				case 2:
+				case 3:
+				case 4:
+					
+					$name		= AKPOS_USERNAME;
+					$password	= AKPOS_PASSWORD;    
+					$clientid	= $this->request->post('clientid'); 
+					$mode 		= "P";
+					$type		= "Auth";  
+					$expires 	= $this->request->post('Ecom_Payment_Card_ExpDate_Month')."/".$this->request->post('Ecom_Payment_Card_ExpDate_Year');
+					$cv2		= $this->request->post('cv2');                     
+					$tutar		= $this->request->post('amount' );        			
+					$oid		= $this->request->post('oid');				
+
+					$lip		= $_SERVER['REMOTE_ADDR'];
+					$email		= $this->request->post("email");  	
+
+					$xid		= $this->request->post('xid'); 
+					$eci		= $this->request->post('eci');   
+					$cavv		= $this->request->post('cavv');  
+					$md			= $this->request->post('md'); 	
+
+					$request= "DATA=<?xml version=\"1.0\" encoding=\"ISO-8859-9\"?>".
+					"<CC5Request>".
+					"<Name>{NAME}</Name>".
+					"<Password>{PASSWORD}</Password>".
+					"<ClientId>{CLIENTID}</ClientId>".
+					"<IPAddress>{IP}</IPAddress>".
+					"<Email>{EMAIL}</Email>".
+					"<Mode>P</Mode>".
+					"<OrderId>{OID}</OrderId>".
+					"<GroupId></GroupId>".
+					"<TransId></TransId>".
+					"<UserId></UserId>".
+					"<Type>{TYPE}</Type>".
+					"<Number>{MD}</Number>".
+					"<Expires></Expires>".
+					"<Cvv2Val></Cvv2Val>".
+					"<Total>{TUTAR}</Total>".
+					"<Currency>949</Currency>".
+					"<Taksit>{TAKSIT}</Taksit>".
+					"<PayerTxnId>{XID}</PayerTxnId>".
+					"<PayerSecurityLevel>{ECI}</PayerSecurityLevel>".
+					"<PayerAuthenticationCode>{CAVV}</PayerAuthenticationCode>".
+					"<CardholderPresentCode>13</CardholderPresentCode>".
+					"<BillTo>".
+					"<Name></Name>".
+					"<Street1></Street1>".
+					"<Street2></Street2>".
+					"<Street3></Street3>".
+					"<City></City>".
+					"<StateProv></StateProv>".
+					"<PostalCode></PostalCode>".
+					"<Country></Country>".
+					"<Company></Company>".
+					"<TelVoice></TelVoice>".
+					"</BillTo>".
+					"<ShipTo>".
+					"<Name></Name>".
+					"<Street1></Street1>".
+					"<Street2></Street2>".
+					"<Street3></Street3>".
+					"<City></City>".
+					"<StateProv></StateProv>".
+					"<PostalCode></PostalCode>".
+					"<Country></Country>".
+					"</ShipTo>".
+					"<Extra>{DESCRIPTION}</Extra>".
+					"</CC5Request>";
+
+					$request=str_replace("{NAME}",$name,$request);
+					$request=str_replace("{PASSWORD}",$password,$request);
+					$request=str_replace("{CLIENTID}",$clientid,$request);
+					$request=str_replace("{IP}",$lip,$request);
+					$request=str_replace("{OID}",$oid,$request);
+					$request=str_replace("{TYPE}",$type,$request);
+					$request=str_replace("{XID}",$xid,$request);
+					$request=str_replace("{ECI}",$eci,$request);
+					$request=str_replace("{CAVV}",$cavv,$request);
+					$request=str_replace("{MD}",$md,$request);
+					$request=str_replace("{TUTAR}",$tutar,$request);
+					$request=str_replace("{TAKSIT}", $corppack["taksit"],$request);	
+					$request=str_replace("{DESCRIPTION}", $this->request->post('description'),$request);
+					$request=str_replace("{EMAIL}", $this->request->post('email'),$request);
+
+					$url = AKPOS_APILINK;
+
+					$ch = curl_init();   
+					curl_setopt($ch, CURLOPT_URL,$url); 
+					curl_setopt($ch, CURLOPT_SSL_VERIFYHOST,1);
+					curl_setopt($ch, CURLOPT_SSLVERSION, 3);
+					curl_setopt($ch, CURLOPT_SSL_VERIFYPEER,0);
+					curl_setopt($ch, CURLOPT_RETURNTRANSFER,1); 
+					curl_setopt($ch, CURLOPT_TIMEOUT, 90); 
+					curl_setopt($ch, CURLOPT_POSTFIELDS, $request); 
+					$curl_result = curl_exec($ch);
+					curl_close($ch);
+					
+					$xml = new SimpleXMLElement($curl_result);
+					
+					if ( $xml ) {
+						
+						$xml = json_decode(json_encode($xml), 1);
+						
+						if ( $xml["ProcReturnCode"] == "00" && $xml["Response"] == "Approved" ) {
+							
+							$error = false;
+							
+						} else {
+							
+							//$error = $xml["ErrMsg"];
+							$error = 'Kart bilgileri hatalı yada banka onay vermiyor.';
+							
+						}
+						
+					} else {
+						
+						$error = 'Banka isteğinize cevap vermiyor. Lütfen tekrar deneyiniz.';
+						
+					}
+					
+				break;
+				default:
+					$error = 'Kart bilgileri hatalı yada banka onay vermiyor.';
+				break;					
+				
+			}
+			
+		}
+		
+		
+        $packages = $this->config->get("corppackages");   
+        
+        $package  = $packages[$corppack["name"]];	
+		
+		
+		if ( $error ) {
+			
+			$this->session->set("error", $error);
+
+			$this->redirect($this->url->link("corporate_packages", "payment"));			
+			
+		} else  {
+			
+			$sql = "
+				INSERT INTO store
+					SET
+						customer_id = '".(int)$this->customer->get("id")."',
+						type = '".$this->db->escape($corppack["name"])."',
+						name = '".$this->db->escape($corppack["store"]["name"])."',
+						slug = '".$this->db->escape($corppack["store"]["slug"])."',
+						about = '".$this->db->escape($corppack["store"]["about"])."',
+						logo = '".$this->db->escape($corppack["store"]["logo"])."',
+						period = '".(int)$corppack["period"]."',
+						date_added = NOW(),
+						date_expired = '".date("Y-m-d", strtotime(date("Y-m-d") . "+ {$corppack["period"]} years"))."',
+						active = '1', status = '1'
+			";
+			
+			$this->db->query($sql);
+			
+			$store_id = $this->db->getLastId();
+			
+			$package_duration = $packages[$corppack["name"]]["duration"][$corppack["period"]];	
+			
+			$this->db->query("
+				INSERT INTO tbl_order SET
+					ref = '".$this->request->post('oid')."',
+					store_id = '".(int)$store_id."',
+					customer_id = '".(int)$this->customer->get("id")."',
+					name = '".$this->db->escape($this->request->post('description'))."',
+					pan = '".$this->db->escape($this->request->post('MaskedPan'))."',
+					item_price = '".number_format($package_duration["price"], 2)."',
+					doping_price = '".( $corppack["doping"] ? number_format($packages[$corppack["name"]]["doping"]["price"], 2) : 0 )."',
+					total = '".number_format($this->request->post('amount'), 2)."',
+					taksit = '".(int)$corppack["taksit"]."',
+					date_added = NOW()
+			");
+			
+			$order_id = $this->db->getLastId();
+			
+			if ( $corppack["name"] == "nakliye" ) {
+				
+				if ( $corppack["period"] == 3 ) {
+					
+					$this->db->query("INSERT INTO nakliye_preserve SET store_id = '".(int)$store_id."', order_id = '".(int)$order_id."', customer_id = '".(int)$this->customer->get("id")."', preserve_id = '15', date_expired = '".date("Y-m-d", strtotime(date("Y-m-d") . "+ 1 weeks"))."', status = '1'");					
+					
+				}
+				
+				if ( $corppack["doping"] ) {
+					
+					$this->db->query("INSERT INTO nakliye_preserve SET store_id = '".(int)$store_id."', order_id = '".(int)$order_id."', customer_id = '".(int)$this->customer->get("id")."', preserve_id = '16', date_expired = '".date("Y-m-d", strtotime(date("Y-m-d") . "+ 1 weeks"))."', status = '1'");										
+					
+				}
+				
+			}
+			
+			if ( $corppack["name"] == "emlak" ) {
+				
+				if ( $corppack["period"] == 3 ) {
+					
+					for ( $i = 0; $i < 3; $i++ ) {
+					
+						$this->db->query("INSERT INTO post_preserve SET type = 'emlak', order_id = '".(int)$order_id."', customer_id = '".(int)$this->customer->get("id")."', preserve_id = '3'");					
+					
+					}
+					
+					for ( $i = 0; $i < 3; $i++ ) {
+					
+						$this->db->query("INSERT INTO post_preserve SET type = 'emlak', order_id = '".(int)$order_id."', customer_id = '".(int)$this->customer->get("id")."', preserve_id = '7'");					
+					
+					}	
+
+					for ( $i = 0; $i < 3; $i++ ) {
+					
+						$this->db->query("INSERT INTO post_preserve SET type = 'emlak', order_id = '".(int)$order_id."', customer_id = '".(int)$this->customer->get("id")."', preserve_id = '9'");					
+					
+					}					
+					
+				}
+				
+				if ( $corppack["doping"] ) {
+					
+					for ( $i = 0; $i < 10; $i++ ) {
+					
+						$this->db->query("INSERT INTO post_preserve SET type = 'emlak', order_id = '".(int)$order_id."', customer_id = '".(int)$this->customer->get("id")."', preserve_id = '3'");					
+					
+					}
+					
+					for ( $i = 0; $i < 2; $i++ ) {
+					
+						$this->db->query("INSERT INTO post_preserve SET type = 'emlak', order_id = '".(int)$order_id."', customer_id = '".(int)$this->customer->get("id")."', preserve_id = '1'");					
+					
+					}	
+					
+					for ( $i = 0; $i < 5; $i++ ) {
+					
+						$this->db->query("INSERT INTO post_preserve SET type = 'emlak', order_id = '".(int)$order_id."', customer_id = '".(int)$this->customer->get("id")."', preserve_id = '7'");					
+					
+					}	
+					
+					for ( $i = 0; $i < 5; $i++ ) {
+					
+						$this->db->query("INSERT INTO post_preserve SET type = 'emlak', order_id = '".(int)$order_id."', customer_id = '".(int)$this->customer->get("id")."', preserve_id = '9'");					
+					
+					}					
+					
+				}
+				
+			}	
+			
+			if ( $corppack["name"] == "vasita" ) {
+				
+				if ( $corppack["period"] == 3 ) {
+					
+					for ( $i = 0; $i < 3; $i++ ) {
+					
+						$this->db->query("INSERT INTO post_preserve SET type = 'vasita', order_id = '".(int)$order_id."', customer_id = '".(int)$this->customer->get("id")."', preserve_id = '3'");					
+					
+					}
+					
+					for ( $i = 0; $i < 3; $i++ ) {
+					
+						$this->db->query("INSERT INTO post_preserve SET type = 'vasita', order_id = '".(int)$order_id."', customer_id = '".(int)$this->customer->get("id")."', preserve_id = '7'");					
+					
+					}	
+
+					for ( $i = 0; $i < 3; $i++ ) {
+					
+						$this->db->query("INSERT INTO post_preserve SET type = 'vasita', order_id = '".(int)$order_id."', customer_id = '".(int)$this->customer->get("id")."', preserve_id = '9'");					
+					
+					}					
+					
+				}
+				
+				if ( $corppack["doping"] ) {
+					
+					for ( $i = 0; $i < 10; $i++ ) {
+					
+						$this->db->query("INSERT INTO post_preserve SET type = 'vasita', order_id = '".(int)$order_id."', customer_id = '".(int)$this->customer->get("id")."', preserve_id = '3'");					
+					
+					}
+					
+					for ( $i = 0; $i < 2; $i++ ) {
+					
+						$this->db->query("INSERT INTO post_preserve SET type = 'vasita', order_id = '".(int)$order_id."', customer_id = '".(int)$this->customer->get("id")."', preserve_id = '1'");					
+					
+					}	
+					
+					for ( $i = 0; $i < 5; $i++ ) {
+					
+						$this->db->query("INSERT INTO post_preserve SET type = 'vasita', order_id = '".(int)$order_id."', customer_id = '".(int)$this->customer->get("id")."', preserve_id = '7'");					
+					
+					}	
+					
+					for ( $i = 0; $i < 5; $i++ ) {
+					
+						$this->db->query("INSERT INTO post_preserve SET type = 'vasita', order_id = '".(int)$order_id."', customer_id = '".(int)$this->customer->get("id")."', preserve_id = '9'");					
+					
+					}					
+					
+				}
+				
+			}
+			
+			if ( $corppack["name"] == "proje" ) {
+				
+				for ( $i = 0; $i < $corppack["period"]; $i++ ) {
+
+					$this->db->query("INSERT INTO project_preserve SET order_id = '".(int)$order_id."', customer_id = '".(int)$this->customer->get("id")."', preserve_id = '17'");					
+
+				}
+				
+				if ( $corppack["doping"] ) {
+					
+					for ( $i = 0; $i < 2; $i++ ) {
+
+						$this->db->query("INSERT INTO project_preserve SET order_id = '".(int)$order_id."', customer_id = '".(int)$this->customer->get("id")."', preserve_id = '11'");					
+
+					}	
+					
+					for ( $i = 0; $i < 2; $i++ ) {
+
+						$this->db->query("INSERT INTO project_preserve SET order_id = '".(int)$order_id."', customer_id = '".(int)$this->customer->get("id")."', preserve_id = '13'");					
+
+					}					
+					
+					for ( $i = 0; $i < 2; $i++ ) {
+
+						$this->db->query("INSERT INTO project_preserve SET order_id = '".(int)$order_id."', customer_id = '".(int)$this->customer->get("id")."', preserve_id = '18'");					
+
+					}	
+					
+					for ( $i = 0; $i < 1; $i++ ) {
+
+						$this->db->query("INSERT INTO project_preserve SET order_id = '".(int)$order_id."', customer_id = '".(int)$this->customer->get("id")."', preserve_id = '19'");					
+
+					}						
+					
+				}
+				
+			}
+			
+			$this->session->delete("corppack");
+			
+			$this->redirect($this->url->link("corporate_packages", "success", array(), array("oid" => $order_id)));
+			
+		}
+		
+		/*
+		_print($package);
+		_print($error);
+		_print($_POST);
+		_print($_SESSION);
+		*/
+		
+	}
+	
+	public function success () {
+		
+		$result = $this->db->query("SELECT s.logo FROM store s LEFT JOIN tbl_order o ON o.store_id = s.id WHERE o.customer_id = '".(int)$this->customer->get("id")."' AND o.id = '".(int)$this->request->get("oid")."'");
+		
+		if ( !$result->rows ) {
+			
+			$this->redirect(HTTP_SERVER);
+			
+		}
+		
+		if ( $result->row["logo"] && $result->row["logo"] != '' && file_exists(DIR_IMAGE . $result->row["logo"]) ) {
+			
+			$size = getimagesize(DIR_IMAGE . $result->row["logo"]);
+			
+			if ( $size[0] > 237 && $size[1] > 133 ) {
+				
+				$this->load->model("image");
+
+				$this->data["corplogo"] = $this->model_image->resize($result->row["logo"], 237, 133);				
+				
+			} else {
+				
+				$this->data["corplogo"] = HTTP_IMAGE . $result->row["logo"];
+				
+			}
+			
+		} else {
+			
+			$this->data["corplogo"] = false;
+			
+		}
+		
+		$this->document->setTitle("Tebrikler - Kurumsal Paketler");
+		
+  		$this->template = 'corporate_packages_success.html';
+		$this->children = array(
+			'header',
+			'menu',
+			'footer',
+		);		
+						
+		$this->response->set($this->render()); 		
+		
+	}
+    
+}
+
+?>

@@ -1,0 +1,107 @@
+<?php  
+class ControllerHome extends Controller {
+	public function index() {
+	
+		$this->document->setTitle('Satılık daire, ev, yazlık, arsa, araba, oto, motor, tekne, işyeri, Kiralık daire, araç, motosiklet, ticari araçlar');
+		$this->document->setDescription("Emlak vasıta konut projeleri ve nakliye hizmetleri konusunda hizmet veren ücretsiz seri ilan sitesi.");
+        $this->document->setKeywords("sahibinden, satılık, kiralık, ev, daire, villa, yazlık, arsa, devremülk, turistik tesis, emlak, emlak ilanları, konut, ev ilanları, ilan, ücretsiz ilan, seri ilan, seri ilanlar, sitesi, sahibinden, emlak, vasıta, emlakçıdan, en ucuz ev, ikinci el vasıta, ikinci el, 2 el, klasik otomobiller, arazi araçları, iş makinaları, makineleri, otobüs, kamyon, tır, traktör, otomobil, ücretsiz oto ilan, araba, hasarlı oto, motosiklet, motorsiklet, elektrikli bisiklet, tekne, oto yedek parçaları, iş makinası fiyatları, arsa ilanları, konut projeleri, hesaplı, ev kredesi, en düşük konut kredisi, en ucuz konut kredisi, ilan ver, bedava, ücretsiz, ikinci el seri ilan sitesi, anahtarım, anahtarim");
+        
+        
+		$this->load->model('post');
+		$this->load->model('move_request');
+		
+		$this->data['estate_premium_preserve'] 	= $this->model_post->getPreserve($this->config->get('estate_parent_id'));
+		$this->data['estate_preserve'] 			= $this->model_post->getPreserve($this->config->get('estate_parent_id'), 'home', 9);		
+		$this->data['vehicle_premium_preserve'] = $this->model_post->getPreserve($this->config->get('vehicle_parent_id'));
+		$this->data['vehicle_preserve'] 		= $this->model_post->getPreserve($this->config->get('vehicle_parent_id'), 'home', 9);
+		$this->data['latest_vehicles']			= $this->model_post->getLatestVehicles(8);
+		$this->data['latest_estates']			= $this->model_post->getLatestEstates();
+		$this->data['latest_move_requests']		= $this->model_move_request->getLasts();
+		
+		$this->template = 'home.html';
+		$this->children = array(
+			'header',
+			'menu',
+			'footer'
+		);		
+						
+		$this->response->set($this->render());
+	}
+	
+	public function about () {
+	
+		$this->document->setTitle('Hakkımızda');
+		
+		$this->template = 'hakkimizda.html';
+		$this->children = array(
+			'header',
+			'menu',
+			'footer'
+		);		
+						
+		$this->response->set($this->render());		
+		
+	}
+	
+	public function contact () {
+	
+		$this->document->setTitle('İletişim');
+		
+		$this->template = 'iletisim.html';
+		$this->children = array(
+			'header',
+			'menu',
+			'footer'
+		);		
+						
+		$this->response->set($this->render());		
+		
+	}	
+	
+	public function tos () {
+	
+		$this->document->setTitle('Üyelik Sözleşmesi');
+		
+		$this->template = 'uyelik_sozlesmesi.html';
+		$this->children = array(
+			'header',
+			'menu',
+			'footer'
+		);		
+						
+		$this->response->set($this->render());		
+		
+	}	
+	
+	public function tos_ () {
+	
+		$this->document->setTitle('Kullanım Koşulları');
+		
+		$this->template = 'kullanim_kosullari.html';
+		$this->children = array(
+			'header',
+			'menu',
+			'footer'
+		);		
+						
+		$this->response->set($this->render());		
+		
+	}	
+	
+	public function privacy () {
+	
+		$this->document->setTitle('Gizlilik Politikası');
+		
+		$this->template = 'gizlilik_politikasi.html';
+		$this->children = array(
+			'header',
+			'menu',
+			'footer'
+		);		
+						
+		$this->response->set($this->render());		
+		
+	}	
+
+}
+?>

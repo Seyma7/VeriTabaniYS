@@ -1,0 +1,412 @@
+<?php  
+class ControllerMove extends Controller {
+
+	public function index() {
+	
+		$this->document->setTitle('Taşınma Talepleri');
+		
+		$this->load->model('location');
+		$this->load->model('move_request');
+		
+		
+		$this->data['latest_move_requests']		= $this->model_move_request->getLasts();
+		$this->data['map_cities'] 				= $this->model_location->getCities();
+		$this->data['city_id']					= ($this->customer->isLogged() ? $this->customer->get('city_id') : 34);
+
+		
+		$query = $this->db->query("SELECT * FROM move_category ORDER BY sort_order ASC");
+
+		$this->data['move_categories'] = array();
+
+		if ( $query->rows ) {
+
+			foreach ( $query->rows as $row ) {
+
+				$this->data['move_categories'][$row['id']] 	= $row;
+
+			}
+
+		}
+		
+		$this->data['cities'] = $this->model_location->getCities();
+		
+		$this->data['get_town_url'] 		= $this->url->link('_ajax_services', 'getTowns');
+		$this->data['get_district_url'] 	= $this->url->link('_ajax_services', 'getDistricts');
+		
+
+		$this->data['days'] = array();
+
+		for ( $i = 1; $i <= 31; $i++ ) {
+
+			$name = ($i < 10 ? "0$i" : $i);
+
+			array_push($this->data['days'], $name);
+
+		}
+
+		$this->data['months'] = array();
+
+		for ( $i = 1; $i <= 12; $i++ ) {
+
+			$name = ($i < 10 ? "0$i" : $i);
+
+			$this->data['months'][] = array(
+				'name' 	=> date("F", mktime(0, 0, 0, 1 + $i, 0, 0)),
+				'value'	=> $name		
+			);
+
+		}
+
+		$this->data['years'] = array();
+
+		for ( $i = date('Y'); $i <= date('Y'); $i++ ) {
+
+			array_push($this->data['years'], $i);
+
+		}
+		
+		$this->data['cells'] = array(
+			'Stüdyo (1+0)',
+			'1+1 ',
+			'2+1',
+			'2+2',
+			'3+1',
+			'3+2',
+			'4+1',
+			'4+2',
+			'4+3',
+			'4+4',
+			'5',
+			'5+1',
+			'5+2',
+			'5+3',
+			'5+4',
+			'6',
+			'6+1',
+			'6+2',
+			'6+3',
+			'6+4'
+		);		
+		
+		
+		$this->template = 'move.html';
+		$this->children = array(
+			'header',
+			'menu',
+			'footer'
+		);		
+						
+		$this->response->set($this->render());
+	}
+	
+	public function request () {
+	
+		$this->document->setTitle('Tüm Taşınma Talepleri');
+		
+		$this->data['breadcrumbs'][] = array('url' => $this->url->link('move'), 'name' => 'Taşınıyorum');
+		$this->data['breadcrumbs'][] = array('url' => $this->url->link('move', 'request'), 'name' => 'Tüm Taşınma Talepleri');
+		
+		$this->load->model('location');
+		
+		$cities = $this->model_location->getCities();
+		
+		$this->data['cities'] = array();
+		
+		if ( $cities ) {
+		
+			foreach ( $cities as $city ) {
+			
+				$this->data['cities'][$city['id']] = $city['name'];
+			
+			}
+		
+		}
+		
+		$city = ( (int)$this->request->get('city') && isset($this->data['cities'][$this->request->get('city')]) ? (int)$this->request->get('city') : false );
+		
+		$this->data['city'] 	= $city;
+		$this->data['action'] 	= $this->url->link("move", "request");
+		
+		$page 	= (!$this->request->has('page') || (int)$this->request->get('page') < 1 ? 1 : (int)$this->request->get('page'));
+		$limit 	= 12;
+		$start	= ($page - 1 ) * $limit; 		
+		
+		$sql = "
+			SELECT
+				mr.id,
+				mr.name,
+				( SELECT image FROM move_image WHERE id = mr.id ORDER BY preview, sort_order ASC LIMIT 1 ) AS image,
+				mr.cell,
+				mr.move_date,
+				mr.slug,
+				mc.name AS category,
+				( SELECT name FROM city WHERE id = mr.from_city ) AS from_city,
+				( SELECT name FROM town WHERE id = mr.from_town ) AS from_town,
+				( SELECT name FROM quarter WHERE id = mr.from_quarter ) AS from_quarter,
+				( SELECT name FROM city WHERE id = mr.to_city ) AS to_city,
+				( SELECT name FROM town WHERE id = mr.to_town ) AS to_town,
+				( SELECT name FROM quarter WHERE id = mr.to_quarter ) AS to_quarter,
+				( SELECT COUNT(id) FROM mr_bid WHERE request_id = mr.id ) AS total_bid,
+				( SELECT SUM(price) FROM mr_bid WHERE request_id = mr.id ) AS bid_ave
+			FROM 
+				move_request mr
+				LEFT JOIN move_category mc ON mr.category_id = mc.id
+			WHERE 
+				mr.status = '1' AND mr.move_date >= '".date('Y-m-d')."' " . ( $city ? " AND mr.from_city = '" . (int)$city . "'" : false ) . "
+			ORDER BY mr.id DESC
+		";
+		
+		$query = $this->db->query($sql);
+		
+		$num_rows = $query->num_rows;
+		
+		$query = $this->db->query($sql . " LIMIT {$start}, {$limit}");
+		
+		$data = array();
+		
+		if ( $query->rows ) {
+		
+			$this->load->model('image');		
+		
+			foreach ( $query->rows as $row ) {
+			
+				$data[] = array(
+				
+					'name' 		=> $row['name'],
+					'image'		=> $this->model_image->resize($row['image'], 140, 94),
+					'cell'		=> ( $row['cell'] ? $row['cell'] : '-' ),
+					'date'		=> date("d F Y", strtotime($row['move_date'])),
+					'category'	=> $row['category'],
+					'from'		=> $row['from_city'] . ' &#187; ' . $row['from_town'] . ' &#187; ' . $row['from_quarter'],
+					'to'		=> $row['to_city'] . ' &#187; ' . $row['to_town'] . ' &#187; ' . $row['to_quarter'],
+					'total_bid'	=> $row['total_bid'],
+					'bid_ave'	=> ( $row['total_bid'] > 0 ? ($row['bid_ave'] / $row['total_bid']) . ' TL' : '-' ),
+					'url'		=> $this->url->link("move", "detail", array("slug" => $row['slug'], 'id' => $row['id']))
+				
+				);
+			
+			}
+		
+		}
+		
+		$this->data['data'] = $data;
+		
+		$pagination = new Pagination();
+		$pagination->total 			= $num_rows;
+		$pagination->page 			= $page;
+		$pagination->limit 			= $limit;
+		$pagination->text 			= "Toplam {pages} sayfa içinde {current_page}. sayfadasınız";
+		$pagination->text_next 		= "<img src='view/images/pagination_next.png' />";
+		$pagination->text_prev 		= "<img src='view/images/pagination_prev.png' />";
+		$pagination->text_first 	= false;
+		$pagination->text_last 		= false;
+		$pagination->url 			= $this->url->link("move", "request", array(), array("city" => $city, "page" => "{page}"));
+		$this->data['pagination'] 	= $pagination->render();		
+		
+		
+		$this->template = 'all_move_request.html';
+		$this->children = array(
+			'header',
+			'menu',
+			'footer'
+		);		
+						
+		$this->response->set($this->render());		
+	
+	}
+	
+	public function detail () {
+	
+		$this->load->model("move");
+		$this->load->model("image");
+	
+		$sql = "
+			SELECT
+				mr.id,
+				mr.name,
+				mr.cell,
+				mr.move_date,
+				mr.description,
+				mc.name AS category,
+				( SELECT name FROM city WHERE id = mr.from_city ) AS from_city,
+				( SELECT name FROM town WHERE id = mr.from_town ) AS from_town,
+				( SELECT name FROM quarter WHERE id = mr.from_quarter ) AS from_quarter,
+				( SELECT name FROM city WHERE id = mr.to_city ) AS to_city,
+				( SELECT name FROM town WHERE id = mr.to_town ) AS to_town,
+				( SELECT name FROM quarter WHERE id = mr.to_quarter ) AS to_quarter,
+				( SELECT COUNT(id) FROM mr_bid WHERE request_id = mr.id ) AS total_bid
+			FROM 
+				move_request mr
+				LEFT JOIN move_category mc ON mr.category_id = mc.id
+			WHERE 
+				mr.status = '1' AND mr.id = '" . (int)$this->request->get('id') . "' AND mr.slug = '" . $this->db->escape($this->request->get('slug')) . "'
+		";
+		
+		$query = $this->db->query($sql);
+
+		if ( !$query->rows ) {
+		
+			return $this->forward("error");
+		
+		}
+		
+		$this->document->setTitle("{$query->row['name']} - Taşınma Talepleri");
+		
+		$this->data['breadcrumbs'][] = array('url' => $this->url->link('move'), 'name' => 'Taşınıyorum');
+		$this->data['breadcrumbs'][] = array('url' => $this->url->link('move', 'request'), 'name' => 'Tüm Taşınma Talepleri');		
+		$this->data['breadcrumbs'][] = array('url' => false, 'name' => "Talep ID: {$query->row['id']}");
+
+		$this->data['id'] 		= $query->row['id'];
+		$this->data['name'] 	= $query->row['name'];
+		$this->data['cell'] 	= $query->row['cell'];
+		$this->data['category'] = $query->row['category'];
+		$this->data['date'] 	= date("d F Y", strtotime($query->row['move_date']));
+		$this->data['from'] 	= $query->row['from_city'] . ' &#187; ' . $query->row['from_town'] . ' &#187; ' . $query->row['from_quarter'];
+		$this->data['to'] 		= $query->row['to_city'] . ' &#187; ' . $query->row['to_town'] . ' &#187; ' . $query->row['to_quarter'];
+		$this->data['post_description'] = $query->row['description'];
+		
+		// move images
+		
+		$images = $this->model_move->getMoveImages($query->row['id']);
+		
+		$this->data['move_images'] = array();
+		
+		if ( $images ) {
+		
+			foreach ( $images as $image ) {
+			
+				$this->data['move_images'][] = array(
+				
+					'thumb' => $this->model_image->resize($image['image'], 93, 59),
+					'big' 	=> $this->model_image->resize($image['image'], 400, 306),
+				
+				);
+			
+			}
+		
+		} else {
+		
+			$this->data['move_images'][] = array(
+			
+				'thumb' => $this->model_image->resize(false, 93, 59),
+				'big' 	=> $this->model_image->resize(false, 400, 306),
+			
+			);			
+		
+		}	
+
+		// move values
+		
+		$this->data['move_values'] = $this->model_move->getMoveValues($query->row['id']);		
+		
+		$this->template = 'move_detail.html';
+		$this->children = array(
+			'header',
+			'menu',
+			'footer'
+		);		
+						
+		$this->response->set($this->render());			
+		
+	
+	}
+    
+    public function transport () {
+        
+ 		$this->document->setTitle('Tüm Nakliye Firmaları');
+		
+		$this->data['breadcrumbs'][] = array('url' => $this->url->link('move'), 'name' => 'Taşınıyorum');
+		$this->data['breadcrumbs'][] = array('url' => $this->url->link('move', 'transport'), 'name' => 'Tüm Nakliye firmaları');
+		
+		$this->load->model('location');
+		
+		$cities = $this->model_location->getCities();
+		
+		$this->data['cities'] = array();
+		
+		if ( $cities ) {
+		
+			foreach ( $cities as $city ) {
+			
+				$this->data['cities'][$city['id']] = $city['name'];
+			
+			}
+		
+		}
+		
+		$city = ( (int)$this->request->get('city') && isset($this->data['cities'][$this->request->get('city')]) ? (int)$this->request->get('city') : false );
+		
+		$this->data['city'] 	= $city;
+		$this->data['action'] 	= $this->url->link("move", "transport");
+		
+		$page 	= (!$this->request->has('page') || (int)$this->request->get('page') < 1 ? 1 : (int)$this->request->get('page'));
+		$limit 	= 12;
+		$start	= ($page - 1 ) * $limit; 		
+		
+		$sql = "
+			SELECT
+				s.*
+			FROM 
+				store s
+				LEFT JOIN customer c ON s.customer_id = c.id
+			WHERE 
+				s.status = '1' AND s.active = '1' AND s.type = 'nakliye' " . ( $city ? " AND c.city_id = '" . (int)$city . "'" : false ) . "
+			ORDER BY s.id DESC
+		";
+		
+		$query = $this->db->query($sql);
+		
+		$num_rows = $query->num_rows;
+		
+		$this->data["total_data"] = $num_rows;
+		
+		$query = $this->db->query($sql . " LIMIT {$start}, {$limit}");
+		
+		$data = array();
+		
+		if ( $query->rows ) {
+		
+			$this->load->model('image');		
+		
+			foreach ( $query->rows as $row ) {
+			
+				$data[] = array(
+				
+					'name' 		=> $row['name'],
+					'image'		=> $this->model_image->resize($row['logo'], 140, 94)
+				
+				);
+			
+			}
+		
+		}
+
+		$this->data['data'] = $data;
+		
+		$pagination = new Pagination();
+		$pagination->total 			= $num_rows;
+		$pagination->page 			= $page;
+		$pagination->limit 			= $limit;
+		$pagination->text 			= "Toplam {pages} sayfa içinde {current_page}. sayfadasınız";
+		$pagination->text_next 		= "<img src='view/images/pagination_next.png' />";
+		$pagination->text_prev 		= "<img src='view/images/pagination_prev.png' />";
+		$pagination->text_first 	= false;
+		$pagination->text_last 		= false;
+		$pagination->url 			= $this->url->link("move", "transport", array(), array("city" => $city, "page" => "{page}"));
+		$this->data['pagination'] 	= $pagination->render();		
+		
+		
+		$this->template = 'nakliye_firmalari.html';
+		$this->children = array(
+			'header',
+			'menu',
+			'footer'
+		);		
+						
+		$this->response->set($this->render());       
+        
+    }
+	
+
+}
+?>

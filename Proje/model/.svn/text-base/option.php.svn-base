@@ -1,0 +1,77 @@
+<?php
+
+Class ModelOption extends Controller{
+	
+	public function getCategoryOptions ( $category_id = false, $opts = array()) {
+	
+		if ( !(int)$category_id ) return false; 
+	
+		$options = array();
+		
+		$query = $this->db->query("SELECT o.id AS option_id, o.name AS `option`, o.type, co.value_id, ov.name FROM category_option co LEFT JOIN `option` o ON co.option_id = o.id LEFT JOIN option_value ov ON ov.id = co.value_id WHERE co.category_id = '".(int)$category_id."' ORDER BY o.sort_order, o.name, ov.sort_order, ov.name ASC");
+		
+		if ( $query->rows ) {
+		
+			foreach ( $query->rows as $row ) {
+			
+				if ( !isset($options[$row['option_id']]) ) {
+				
+					$options[$row['option_id']]['id'] 	= $row['option_id'];
+					$options[$row['option_id']]['name'] = $row['option'];
+					$options[$row['option_id']]['type'] = $row['type'];
+					
+					if ( $row['type'] == 'text' ) {
+					
+						$options[$row['option_id']]['value'] = (isset($opts[$row['option_id']]) ? $opts[$row['option_id']] : '');
+					
+					} else if ( $row['type'] == 'select' ) {
+					
+						$options[$row['option_id']]['values'] = array();
+					
+					}
+					
+				}
+				
+				if ( $row['type'] == 'select' ) {
+				
+					$options[$row['option_id']]['values'][] = array('id' => $row['value_id'], 'name' => $row['name'], 'selected' => (isset($opts[$row['option_id']]) && $opts[$row['option_id']] == $row['value_id'] ? true : false));
+				
+				}
+			
+			}
+		
+			return $options;
+		
+		}
+		
+		return false;
+	
+	}	
+	
+	public function getPostOptions ($post_id) {
+	
+		if ( !(int)$post_id ) return false;
+		
+		$query = $this->db->query("SELECT * FROM post_option WHERE post_id = '".(int)$post_id."'");
+		
+		if ( $query->rows ) {
+		
+			$data = array();
+			
+			foreach ( $query->rows as $row ) {
+
+				$data[$row['option_id']] = $row['value'];
+			
+			}
+			
+			return $data;
+		
+		}
+		
+		return false;
+	
+	}
+	
+}
+
+?>

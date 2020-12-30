@@ -1,0 +1,30 @@
+<?php  
+class ControllerUserActivate extends Controller {
+	public function index() {
+	
+		if ($this->request->has('email') && $this->request->has('hash')) {
+		
+			$query = $this->db->query("SELECT * FROM customer WHERE email = '".$this->db->escape(urldecode($this->request->get('email')))."' AND status = '0'");
+			
+			if ($query->rows) {
+				
+				$password = $this->encryption->decrypt($query->row['password']);
+				
+				if ($this->request->get('hash') == md5($query->row['id'].$query->row['email'].$password)) {
+				
+					$this->db->query("UPDATE customer SET status = '1' WHERE id = '".(int)$query->row['id']."'");
+					
+					$this->customer->login($query->row['email'], $password);
+				
+				}
+			
+			}
+		
+		}
+		//_print(urldecode($this->request->get('email')));
+		$this->redirect(HTTP_SERVER);
+				
+	}
+
+}
+?>

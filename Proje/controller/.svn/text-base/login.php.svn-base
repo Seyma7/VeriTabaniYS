@@ -1,0 +1,64 @@
+<?php  
+class ControllerLogin extends Controller {
+	public function index() {
+	
+		if ($this->customer->isLogged()) {
+		
+			$this->redirect(HTTP_SERVER);
+		
+		}	
+	
+		$this->document->setTitle('Giriş yap');
+        
+        if ( $this->session->has("error") ) {
+            
+            $this->data['error'] = $this->session->get("error");
+            
+            $this->session->delete("error");
+            
+        }
+
+		if ($this->request->isPOST()) {
+
+			if ($this->customer->login($this->request->post('username'), $this->encryption->encrypt($this->request->post('password')))) {
+			
+                if ( $this->request->get("ref") ) {
+                    
+                    $this->redirect($this->request->get("ref"));
+                    
+                } else if ($this->session->has('redirect')) {
+				
+					$redirect = str_replace('&amp;', '&', $this->session->get('redirect'));
+					
+					$this->session->delete('redirect');
+				
+					$this->redirect($redirect);
+				
+				} else {
+				
+					$this->redirect(HTTP_SERVER);
+				
+				}
+				
+			} else {
+			
+				$this->data['error'] = 'Kullanıcı adı veya şifre yanlış';
+			
+			}
+		
+		}
+        
+        $this->data['login_action'] = $this->url->link("login", false, array(), array("ref" => $this->request->get("ref")));
+		
+		$this->template = 'login.html';
+		$this->children = array(
+			'header',
+			'menu',
+			'footer',
+		);		
+						
+		$this->response->set($this->render());		
+	}
+
+}
+?>

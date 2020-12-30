@@ -1,0 +1,36 @@
+{$header}
+{$menu}
+<div id="content">
+
+  {if $slide}
+      <!-- slider -->
+    <div id="slider">
+      <div class="container slider">
+        <div class="row">
+                  <div class="box col-xs-12 col-md-10 col-md-offset-1 noPadding">
+                  {*<div class="col-xs-12 noPadding contentHeadArea"><div class="col-xs-12 noPadding contentHeadLine"><label><h2>ÖNE ÇIKANLAR</h2></label></div></div>*}
+                  <div id="slideImage" class="owl-carousel">
+                         {foreach from = $slide item = value key = k}
+                         {foreach from = $value item = i key = j}
+                             <div class="item">
+                                 <a href="{$i.url}" title="{$i.name}">
+                                     <img src="{$i.image}" title="{$i.name}" alt="{$i.name}" width="963" height="412"/>
+                                     <div class="slideShadow"><h1>{$i.name}</h1></div>
+                                 </a>
+                             </div>
+                        {/foreach}
+                        {/foreach}
+                     </div>
+                     <div id="slideThumbImage" class="owl-carousel">
+                       {foreach from = $slide item = value key = k}
+                       {foreach from = $value item = i key = j}
+                          <div class="item"><img src="{$i.image_thumb}" title="" alt="" width="116" height="50"/></div>
+                        {/foreach}
+                        {/foreach}
+                     </div>
+                  </div>
+        </div>
+      </div>
+    </div>
+  {/if}
+{$footer}

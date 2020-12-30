@@ -1,0 +1,73 @@
+<?php
+ 
+Class ModelPostsearch extends Controller{
+	
+	public function breadcrumbs ( $fields = array() ) {
+	
+		if ( !$fields ) return false;
+		
+		$breadcrumbs = array();
+	
+		foreach ( $fields as $field ) {
+		
+			$breadcrumbs[] = array(
+			
+				'name' 	=> $field['name'],
+				'url'	=> $this->url->link('post_search', false, array('category' => $field['tag']))
+			
+			);
+		
+		}	
+		
+		return $breadcrumbs;
+	
+	}	
+	
+	public function category_tree ( $fields = array() ) {
+	
+		if ( !$fields ) return false;
+		
+		$categories = array();
+	
+		foreach ( $fields as $field ) {
+		
+			$sub = array();
+		
+			if ( end($fields) == $field ) {
+			
+				$query = $this->db->query("SELECT c.* FROM category c LEFT JOIN post_category pc ON pc.category_id = c.id LEFT JOIN post p ON pc.post_id = p.id WHERE c.parent = '".(int)$field['id']."' AND p.status = '1' AND p.date_published > '".date('Y-m-d', strtotime(date('Y-m-d') . ' - 3 months'))."' GROUP BY c.id ORDER BY c.sort_order, c.name ASC");
+				
+				if ( $query->rows ) {
+				
+					foreach ( $query->rows as $row ) {
+					
+						$sub[] = array(
+						
+							'name' 	=> $row['name'],
+							'url'	=> $this->url->link('post_search', false, array('category' => $row['slug']), array('displayItems' => $this->request->get('displayItems'))),
+						
+						);
+					
+					}
+				
+				}
+				
+			}
+		
+			$categories[] = array(
+			
+				'name' 	=> $field['name'],
+				'url'	=> $this->url->link('post_search', false, array('category' => $field['tag']), array('displayItems' => $this->request->get('displayItems'))),
+				'sub'	=> $sub
+			
+			);
+		
+		}	
+
+		return $categories;
+	
+	}
+	
+}
+
+?>

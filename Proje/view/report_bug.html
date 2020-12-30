@@ -1,0 +1,113 @@
+{*<div id="popUpReport">
+	<div id="popUpReportHead" onclick="showReportForm();" >Eksik / Hata Bildir</div>
+	<div id="popUpReportForm">
+		<div id="reportText"></div>
+		{if !$isLogin}
+        <div class="reportForm_item"><input type="text" name="firstname" maxlength="30" placeholder="Adınız" value=""></div>
+        <div class="reportForm_item"><input type="text" name="lastname" maxlength="30" placeholder="Soyadınız" value=""></div>
+        <div class="reportForm_item"><input type="text" name="email" maxlength="30"  placeholder="E-mail Adresiniz" value=""></div>
+        {/if} 
+        <div class="reportForm_item">
+        	<select name="report">
+				<option value="0">Rapor Türü Seçiniz</option>
+				{if $report_list}
+				{foreach from = $report_list item = i}
+				<option value="{$i.id}" {if $i.id == $report}selected{/if}>{$i.name}</option>
+				{/foreach}
+				{/if}
+			</select>
+        </div>
+        <div class="reportForm_item"><textarea name="message" placeholder="Mesajınız"></textarea></div>
+        <div class="reportForm_item">
+        	<img id="reportCaptchaIMG" src="">
+        	<div id="yenile"  onclick="renew_reportCaptcha()"></div>
+        	<input  id="reportCaptcha" name="captcha" maxlength="5" type="text" placeholder="Doğrulama Kodu">
+        	<div class="clear"></div>
+        </div>
+        <div class="reportForm_item">
+        	<input type="button" id="reportCancelButton" onclick="closeReportForm();" value="İptal" />
+        	<input type="button" id="reportSubmitButton" value="Gönder" />
+        	<div class="clear"></div>
+        </div>
+	</div>
+</div>
+<script type="text/javascript">
+	var reportCaptcha_url 	= "{$reportCaptcha_url}";
+	var report_url 			= "{$action}";
+
+	function renew_reportCaptcha () {
+		$('img[id="reportCaptchaIMG"]').attr('src', reportCaptcha_url);
+	}
+
+	function closeReportForm(){
+		$('#popUpReportForm').removeClass('show');
+		$('#popUpReportForm *[type=text]').val('').removeClass('error');
+		$('#popUpReportForm textarea').val('').removeClass('error');
+		$('#popUpReportForm select').removeClass('error').children().first().prop('selected', true);
+		$('#reportText').html('').removeClass();
+	}
+
+	function showReportForm(){
+		$('#popUpReportForm').addClass('show');
+	}
+
+	renew_reportCaptcha();
+ {literal}
+	$('#reportSubmitButton').click(function(){
+
+		var error 			=	0;
+		var firstname		=	$('#popUpReportForm *[name=firstname]');
+		var lastname		=	$('#popUpReportForm *[name=lastname]');
+		var email			=	$('#popUpReportForm *[name=email]');
+		var report			=	$('#popUpReportForm *[name=report]');
+		var message			=	$('#popUpReportForm *[name=message]');
+		var captcha			=	$('#popUpReportForm *[name=captcha]');
+
+		if(firstname && firstname.val() == '') 	{ error++; firstname.addClass('error');}else{firstname.removeClass('error');}
+		if(lastname && lastname.val() == '') 	{ error++; lastname.addClass('error');}else{lastname.removeClass('error');}
+		if(email && email.val() == '') 			{ error++; email.addClass('error');}else{email.removeClass('error');}
+		if(report && report.val() == 0) 		{ error++; report.addClass('error');}else{report.removeClass('error');}
+		if(message && message.val() == '') 		{ error++; message.addClass('error');}else{message.removeClass('error');}
+		if(captcha && captcha.val() == '') 		{ error++; captcha.addClass('error');}else{captcha.removeClass('error');}
+
+		if(error == 0 ){
+
+			$('#reportText').html('').removeClass();
+
+			 $.ajax({
+				url		: report_url,
+				type	: 'POST',
+				dataType: 'JSON',
+				data	: 	{
+								firstname: firstname.val(),
+								lastname: lastname.val(),
+								email: email.val(),
+								report: report.val(),
+								message: message.val(),
+								captcha: captcha.val(),
+							},
+				success	: function(json) {
+
+ 					if(json['success']){
+
+						$('#reportText').html(json['success']).addClass('success');
+						renew_reportCaptcha();
+
+ 					}else if(json['error']){
+
+						$('#reportText').html(json['error']).addClass('error');
+ 					}
+
+				},
+				complete: function () {
+
+				}
+			});
+
+		}else{
+
+			$('#reportText').html('Mesajınızda boş alan(lar) bulunmaktadır.').addClass('error');
+		}
+	});
+ {/literal}
+</script>*}

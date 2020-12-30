@@ -1,0 +1,222 @@
+<?php  
+class ControllerSignup extends Controller {
+
+	private $error;
+
+	public function index() {
+	
+		if ($this->customer->isLogged()) {
+		
+			$this->redirect(HTTP_SERVER);
+		
+		}
+	
+		$this->document->setTitle('Üye ol');
+		
+		// city
+		$query = $this->db->query("SELECT * FROM city ORDER BY sort_order ASC");
+		
+		$this->data['cities'] = array();
+		
+		foreach ($query->rows as $row) {
+			
+			$this->data['cities'][$row['id']] = $row['name'];
+			
+		}
+
+		// dob
+		// day
+		for($i = 1; $i <= 31; $i++){
+			$this->data['days'][$i] = $i;
+		}
+		// month
+		for($i = 1; $i <= 12; $i++){
+			$this->data['months'][$i] = strftime('%B', strtotime("01-$i-" . date('Y')));
+		}
+		// year
+		for($i = date('Y', strtotime(date('Y') . ' -18 years')); $i >= 1940; $i--){
+			$this->data['years'][$i] = $i;
+		}	
+		
+		if ($this->request->isPOST()) {
+		
+			if ($this->request->post('confirm') != 'on') {
+			
+				$this->error = 'Kullanım koşullarını kabul etmelisiniz.';
+			
+			}		
+			
+			if (!isset($this->data['days'][$this->request->post('day')]) || !isset($this->data['months'][$this->request->post('month')]) || !isset($this->data['years'][$this->request->post('year')])) {
+			
+				$this->error = 'Lütfen doğum tarihinizi kontrol edin.';
+			
+			}	
+			
+			if (!in_array($this->request->post('gender'), array(1, 2))) {
+			
+				$this->error = 'Lütfen cinsiyetinizi seçin.';
+			
+			}
+		
+			if (strlen($phone_new = str_replace(array('(', ')', '-', ' '), '', $this->request->post('mobile_phone'))) != 10) {
+			
+				$this->error = '10 karakterli telefon numaranızı girin.';
+			
+			}
+		
+			if (!isset($this->data['cities'][$this->request->post('city_id')])) {
+			
+				$this->error = 'Lütfen şehrinizi seçin.';
+			
+			}
+		
+			if (!$this->request->post('password') || strlen($this->request->post('password')) < 5) {
+			
+				$this->error = 'Şifreniz en az 5 karakterli olmalıdır.';
+			
+			} else {
+			
+				if($this->request->post('password') != $this->request->post('password_confirm')){
+				
+					$this->error = 'Şifreniz ve onay alanı uyuşmuyor. Kontrol edin.';
+				
+				}
+				
+			}		
+			
+			if (!filter_var($this->request->post('email'), FILTER_VALIDATE_EMAIL)) {
+				
+				$this->error = 'E-posta adresinizi kontrol edin.';
+				
+			} else {
+				
+				$query = $this->db->query("SELECT * FROM customer WHERE email = '".$this->db->escape($this->request->post('email'))."'");
+				
+				if($query->rows){
+				
+					$this->error = 'Girdiğiniz e-posta adresi sistemde kayıtlı.';
+				
+				}
+				
+			}		
+			
+			if (strlen($this->request->post('username')) < 3) {
+				
+				$this->error = 'Lütfen kendinize ait kullanıcı adı girin.';
+				
+			} else {
+			
+				$query = $this->db->query("SELECT * FROM customer WHERE username = '".$this->db->escape($this->request->post('username'))."'");
+				
+				if ($query->rows) {
+				
+					$this->error = 'Kullanıcı adı kayıtlı. Lütfen başka tercih yapın.';
+				
+				}
+			
+			}
+			
+			if (strlen($this->request->post('lastname')) < 3) {
+				
+				$this->error = 'Lütfen soyadınızı girin.';
+				
+			}
+			
+			if (strlen($this->request->post('firstname')) < 3) {
+				
+				$this->error = 'Lütfen adınızı girin.';
+				
+			}
+
+			if (!$this->error) {
+			
+				$this->db->query("
+					INSERT INTO customer SET
+					firstname 	= '".$this->db->escape($this->request->post('firstname'))."',
+					lastname 	= '".$this->db->escape($this->request->post('lastname'))."',
+					username 	= '".$this->db->escape($this->request->post('username'))."',
+					email 		= '".$this->db->escape($this->request->post('email'))."',
+					password 	= '".$this->encryption->encrypt($this->request->post('password'))."',
+					city_id 	= '".(int)$this->request->post('city_id')."',
+					mobile_phone= '".$this->db->escape($phone_new)."',
+					gender 		= '".(int)$this->request->post('gender')."',
+					birthdate 	= '".(int)$this->request->post('year')."-".(int)$this->request->post('month')."-".(int)$this->request->post('day')."'
+				");
+				
+				$customer_id = $this->db->getLastId();
+				
+				$url = $this->url->link('user_activate', false, array('email' => urlencode($this->request->post('email')), 'hash' => md5($customer_id.$this->request->post('email').$this->request->post('password'))));
+				
+				$this->load->library('phpmailer');
+
+				$mail = new PHPMailer(true);
+				$mail->CharSet = "UTF-8";
+				$mail->IsSMTP();                           
+				$mail->SMTPAuth   = $this->config->get('mail_smtpAuth');                  
+				$mail->Port       = $this->config->get('mail_port');                    
+				$mail->Host       = $this->config->get('mail_host'); 
+				$mail->Username   = $this->config->get('mail_username');     
+				$mail->Password   = $this->config->get('mail_password');	
+				$mail->SetFrom($this->config->get('mail_username'), 'anahtarim.com');	
+				$mail->Subject    = 'Üyelik aktivasyonu!';
+				$mail->MsgHTML("
+				<p><b>Sayın {$this->request->post('firstname')} {$this->request->post('lastname')}</b></p> 
+				<p>Üyeliğinizin aktif olması için lütfen <a href='{$url}'>aktivasyon</a> adresine tıklayınız.</p>
+				");
+				$mail->AddAddress($this->request->post('email'), $this->request->post('firstname') . " " . $this->request->post('lastname'));
+				@$mail->Send();					
+				
+			
+				return $this->forward('signup', 'success');
+				
+			}
+		
+		}
+		
+		if ($this->error) {
+		
+			$this->data['error'] = $this->error;
+			
+		}	
+		
+		$this->data['firstname'] 	= ($this->request->has('firstname', 'post') ? $this->request->post('firstname') : false);
+		$this->data['lastname'] 	= ($this->request->has('lastname', 'post') ? $this->request->post('lastname') : false);
+		$this->data['username'] 	= ($this->request->has('username', 'post') ? $this->request->post('username') : false);
+		$this->data['email'] 		= ($this->request->has('email', 'post') ? $this->request->post('email') : false);
+		$this->data['city_id'] 		= ($this->request->has('city_id', 'post') ? (int)$this->request->post('city_id') : false);
+		$this->data['mobile_phone'] = ($this->request->has('mobile_phone', 'post') ? $this->request->post('mobile_phone') : false);
+		$this->data['gender'] 		= ($this->request->has('gender', 'post') ? $this->request->post('gender') : false);
+		$this->data['day'] 			= ($this->request->has('day', 'post') ? $this->request->post('day') : false);
+		$this->data['month'] 		= ($this->request->has('month', 'post') ? $this->request->post('month') : false);
+		$this->data['year'] 		= ($this->request->has('year', 'post') ? $this->request->post('year') : false);
+		$this->data['confirm'] 		= ($this->request->has('confirm', 'post') && $this->request->post('confirm') == 'on' ? true : false);
+		
+		$this->template = 'signup.html';
+		$this->children = array(
+			'header',
+			'menu',
+			'footer',
+		);		
+						
+		$this->response->set($this->render());	
+		
+	}
+	
+	public function success () {
+		
+		$this->document->setTitle('Üye ol');
+		
+		$this->template = 'signup_success.html';
+		$this->children = array(
+			'header',
+			'menu',
+			'footer'
+		);		
+						
+		$this->response->set($this->render());			
+	
+	}
+
+
+}
+?>

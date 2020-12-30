@@ -1,0 +1,11 @@
+<?php 
+class ModuleFooter extends Controller {
+	protected function fetch() {
+	
+		
+		$this->template = 'footer.html';
+		
+		$this->render();
+	}
+}
+?>

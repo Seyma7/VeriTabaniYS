@@ -1,0 +1,113 @@
+<?php  
+class Controllerforgottenpwd extends Controller {
+
+	public function index() {
+	
+		if ($this->customer->isLogged()) {
+		
+			$this->redirect(HTTP_SERVER);
+		
+		}	
+	
+		$this->document->setTitle('Şifremi unuttum');
+		
+		if ($this->request->isPOST()) {
+		
+			$query = $this->db->query("SELECT * FROM customer WHERE email = '".$this->db->escape($this->request->get('email', 'post'))."'");
+
+			if ($query->rows) {
+			
+				if (!in_array($this->request->get('r1', 'post'), array('username', 'password'))) {
+				
+					$this->data['error'] = 'Lütfen yapılacak işlemi seçin.';
+				
+				} else {
+				
+					if ($this->request->get('r1', 'post') == 'username') {
+					
+						$forward_func 	= 'success_username';
+						$msg			= "<p><b>Kullanıcı adınız: {$query->row['username']}</b></p>";
+					
+					} else {
+					
+						$forward_func 	= 'success_password';
+						$msg			= "<p><b>Şifreniz: {$this->encryption->decrypt($query->row['password'])}</b></p>";
+					
+					}
+					
+					$this->load->library('phpmailer');
+
+					$mail = new PHPMailer(true);
+					$mail->CharSet = "UTF-8";
+					$mail->IsSMTP();                           
+					$mail->SMTPAuth   = $this->config->get('mail_smtpAuth');                  
+					$mail->Port       = $this->config->get('mail_port');                    
+					$mail->Host       = $this->config->get('mail_host'); 
+					$mail->Username   = $this->config->get('mail_username');     
+					$mail->Password   = $this->config->get('mail_password');	
+					$mail->SetFrom($this->config->get('mail_username'), 'anahtarim.com');	
+					$mail->Subject    = 'Hatırlatma!';
+					$mail->MsgHTML("
+					<p><b>Sayın {$query->row['firstname']} {$query->row['lastname']}</b></p> 
+					{$msg}
+					<p><a href='{$this->url->link('login')}'>Buraya</a> tıklayarak hesabınıza giriş yapabilirsiniz.</p>
+					");
+					$mail->AddAddress($query->row['email'], $query->row['firstname'] . " " . $query->row['lastname']);
+					@$mail->Send();	
+					
+					$this->redirect($this->url->link('forgotten_pwd', $forward_func));
+				
+				}
+			
+			} else {
+			
+				$this->data['error'] = 'E-posta adresi sistemde kayıtlı değil.';
+				
+			}
+		
+		}
+		
+		$this->data['action'] = $this->url->link('forgotten_pwd');
+		
+		$this->template = 'forgotten_pwd.html';
+		$this->children = array(
+			'header',
+			'menu',
+			'footer',
+		);		
+						
+		$this->response->set($this->render());		
+	}
+	
+	public function success_username () {
+	
+
+		$this->template = 'forgotten_success_username.html';
+		$this->children = array(
+			'header',
+			'menu',
+			'footer',
+		);		
+						
+		$this->response->set($this->render());	
+	
+	
+	}
+	
+	public function success_password () {
+	
+
+		$this->template = 'forgotten_success_password.html';
+		$this->children = array(
+			'header',
+			'menu',
+			'footer',
+		);		
+						
+		$this->response->set($this->render());	
+	
+	
+	}
+
+}
+?>

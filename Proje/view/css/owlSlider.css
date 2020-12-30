@@ -1,0 +1,21 @@
+#slideImage .item{
+    padding: 0;
+    color: #FFF;
+    -webkit-border-radius: 3px;
+    -moz-border-radius: 3px;
+    border-radius: 3px;
+    text-align: center;
+}
+#slideThumbImage .item{
+    color: #FFF;
+    text-align: center;
+    cursor: pointer;
+    border: 3px solid #FFF;
+}
+#slideThumbImage .item:last-child(){margin-right: 0;}
+#slideThumbImage .item h1{
+  font-size: 18px;
+}
+#slideThumbImage .synced .item{
+  border-color: #d23737;
+}

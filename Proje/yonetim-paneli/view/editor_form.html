@@ -1,0 +1,134 @@
+﻿{$header}
+{if isset($error)}<div class="error_gen marg10"><b>Hata:</b> {$error}</div>{/if}
+<script type="text/javascript" src="view/js/jquery-ui-1.8.23.custom.min.js"></script>
+<link rel="stylesheet" type="text/css" href="view/css/flick/jquery-ui-1.8.23.custom.css" />
+<script type="text/javascript" src="view/js/ajaxupload.js"></script>
+{*
+<script type="text/javascript" src="view/js/tiny_mce/tiny_mce.js"></script>
+<script type="text/javascript">
+tinyMCE.init({
+        // General options
+        mode : "exact",
+        theme : "advanced",
+		elements: "description",
+        plugins : "autolink,lists,spellchecker,pagebreak,layer,table,save,advhr,advimage,advlink,emotions,iespell,inlinepopups,insertdatetime,preview,media,searchreplace,print,contextmenu,paste,directionality,fullscreen,noneditable,visualchars,nonbreaking,xhtmlxtras,template",
+		language: "tr",
+
+        // Theme options
+        theme_advanced_buttons1 : "code,preview,|,cut,copy,paste,link,unlink,|,bold,italic,underline,strikethrough,|,justifyleft,justifycenter,justifyright,justifyfull,|,forecolor,backcolor,fontselect,fontsizeselect",
+		theme_advanced_toolbar_location : "top",
+        theme_advanced_toolbar_align : "left",
+        theme_advanced_statusbar_location : "bottom",
+        theme_advanced_resizing : true,
+
+        // Skin options
+        skin : "o2k7",
+        skin_variant : "silver",
+
+		width : "700",
+		height : "250",
+
+        // Replace values for the template plugin
+        template_replace_values : {
+                username : "Some User",
+                staffid : "991234"
+        }
+});
+</script>
+*}
+<div class="box_head"></div>
+<div class="box_body">
+	<div class="heading_title">{$title}</div>
+	<div class="buttons marg10">
+		<a onClick="$('form#save').submit();" class="button">Kaydet</a>
+		<a href="{$cancel}" class="button">Vazgeç</a>
+		{if $delete}
+		<a href="{$delete}" class="button">Kayıt Sil</a>
+		{/if}
+		<span class="quick">Hızlı işlem:
+			<select name="" onChange="$('#stayOnPage').val($(this).val()); $('form#save').submit();" class="input1" style="width: 200px">
+				<option value="0">Bir işlem seçin</option>
+				<option value="new">Kaydet & Yeni Ekle</option>
+				<option value="edit">Kaydet & Sayfada Kal</option>
+			</select>
+		</span>
+	</div>
+	<form action="{$action}" method="post" autocomplete="off" id="save" name="save">
+		<input type="hidden" name="stayOnPage" id="stayOnPage" value="0" />
+		<div id="tabs" class="htabs">
+			<a href="#tab_general">Editör Bilgileri</a>
+			<a href="#tab_permission">Editör Yetkileri</a>
+		</div>
+
+		<div id="tab_general">
+			<table class="list">
+				<tr class="head">
+					<td width="5">&nbsp;</td>
+					<td colspan="2">Editör Bilgileri</td>
+				</tr>
+				<tr class="gridrow">
+					<td></td>
+					<td class="field1"><span class="required">*</span> Editör Kullanıcı Adı:</td>
+					<td><input type="text" {if $method == 'edit'}disabled{/if} name="username" value="{$username}" class="input1"  maxlength="30" /></td>
+				</tr>
+				<tr class="gridrow">
+					<td></td>
+					<td class="field1"><span class="required">*</span> Editör Parola:</td>
+					<td><input type="text" {if $method == 'edit'}disabled{/if} name="password" value="{$password}" class="input1 stringCounter" maxL="20" minL="6" maxlength="20" placeholder="(en az 6 en fazla 20 karakter)"/></td>
+				</tr>
+				<tr class="gridrow">
+					<td></td>
+					<td class="field1"><span class="required">*</span> Hesap Durumu:</td>
+					<td>
+						<select name="status" class="input1">
+						<option value="0">Seçiniz</option>
+						{if $statuses}{foreach from = $statuses item = i}
+						<option value="{$i.id}"{if $status == $i.id} selected{/if}>{$i.name}</option>{/foreach}{/if}
+						</select>
+					</td>
+				</tr>
+			</table>
+		</div>
+
+
+		<div id="tab_permission">
+			<table class="list">
+				<tr class="head">
+					<td width="5">&nbsp;</td>
+					<td colspan="6">Editör Yetkileri</td>
+				</tr>
+        <tr class="gridrow">
+					<td></td>
+					<td class="field1"></td>
+          <td width="5">Görüntüleme</td>
+          <td width="5">Ekleme</td>
+          <td width="5">Düzenleme</td>
+          <td width="5">Silme</td>
+					<td>&nbsp;</td>
+				</tr>
+        {if $user_perm}
+        {foreach from = $user_perm item = i}
+        <input type="hidden" name="user_perm[{$i.id}][id]" value="{$i.id}"/>
+				<tr class="gridrow">
+					<td></td>
+					<td class="field1">{$i.name}:</td>
+          <td align="center"><input type="checkbox" name="user_perm[{$i.id}][perms][v]" value="1" {if $i.perms.v == 1 } checked="checked" {/if}/></td>
+          <td align="center"><input type="checkbox" name="user_perm[{$i.id}][perms][i]" value="1" {if $i.perms.i == 1 } checked="checked" {/if}/></td>
+          <td align="center"><input type="checkbox" name="user_perm[{$i.id}][perms][e]" value="1" {if $i.perms.e == 1 } checked="checked" {/if}/></td>
+          <td align="center"><input type="checkbox" name="user_perm[{$i.id}][perms][d]" value="1" {if $i.perms.d == 1 } checked="checked" {/if}/></td>
+          <td><input class="togglePerm"  onclick="$(this).parents('tr.gridrow').find('input[name*=\'user_perm\']').attr('checked', this.checked);" {if $i.perms.v == 1 && $i.perms.i == 1 && $i.perms.e == 1 && $i.perms.d == 1 } checked="checked" {/if}  type="checkbox" name=""/></td>
+				</tr>
+        {/foreach}
+        {/if}
+			</table>
+		</div>
+
+		<div class="clear"></div>
+	</form>
+</div>
+<script type="text/javascript">
+$(window).load(function(){
+	$('#tabs a').tabs();
+});
+</script>
+{$footer}

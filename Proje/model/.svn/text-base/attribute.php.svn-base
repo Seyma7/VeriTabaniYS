@@ -1,0 +1,75 @@
+<?php
+
+Class ModelAttribute extends Controller{
+	
+	public function getCategoryAttributes ( $category_id = false, $attrs = array()) {
+	
+		if ( !(int)$category_id ) return false; 
+	
+		$query = $this->db->query("SELECT a.id AS attribute_id, a.name AS attribute, av.id AS value_id, av.name AS value FROM category_attribute ca LEFT JOIN attribute a ON ca.attribute_id = a.id LEFT JOIN attribute_value av ON ca.value_id = av.id WHERE ca.category_id = '".(int)$category_id."' ORDER BY a.sort_order, av.sort_order ASC");
+		
+		if ( $query->rows ) {
+		
+			$data = array();
+		
+			foreach ( $query->rows as $row ) {
+			
+				if ( !isset($data[$row['attribute_id']]) ) {
+				
+					$data[$row['attribute_id']]['id'] 	= $row['attribute_id'];
+					$data[$row['attribute_id']]['name'] 	= $row['attribute'];
+					$data[$row['attribute_id']]['values'] = array();
+				
+				}
+		
+				$data[$row['attribute_id']]['values'][] = array(
+				
+					'id' 		=> $row['value_id'],
+					'name'		=> $row['value'],
+					'selected'	=> (isset($attrs[$row['attribute_id']]) && in_array($row['value_id'], $attrs[$row['attribute_id']]) ? true : false)
+				
+				);
+		
+			}
+				
+			return $data;
+		
+		}
+		
+		return false;
+	
+	}	
+	
+	public function getPostAttributes ($post_id) {
+	
+		if ( !(int)$post_id ) return false;
+		
+		$query = $this->db->query("SELECT * FROM post_attribute WHERE post_id = '".(int)$post_id."'");
+		
+		if ( $query->rows ) {
+		
+			$data = array();
+			
+			foreach ( $query->rows as $row ) {
+			
+				if ( !isset($data[$row['attribute_id']]) ) {
+				
+					$data[$row['attribute_id']] = array();
+				
+				}
+				
+				array_push($data[$row['attribute_id']], $row['value_id']);
+			
+			}
+			
+			return $data;
+		
+		}
+		
+		return false;
+	
+	}
+	
+}
+
+?>

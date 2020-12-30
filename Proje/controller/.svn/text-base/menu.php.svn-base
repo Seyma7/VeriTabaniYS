@@ -1,0 +1,73 @@
+<?php 
+
+Class ModuleMenu extends Controller {
+
+	protected function fetch() {
+		
+		$menu_category = $this->cache->get('menu_category');
+		
+		if (!$menu_category) {
+		
+			$menu_category = array();
+		
+			$query = $this->db->query("SELECT * FROM category WHERE parent = '0' ORDER BY sort_order ASC");
+			
+			$this->data['menu_category'] = array();
+			
+			if ( $query->rows ) {
+			
+				foreach ( $query->rows as $row ) {
+				
+					$category_data = array();
+				
+					$category_query = $this->db->query("SELECT * FROM category WHERE parent = '".(int)$row['id']."' ORDER BY sort_order ASC LIMIT 6");
+					
+					if ( $category_query->rows ) {
+					
+						foreach ( $category_query->rows as $category_row ) {
+
+							$category_data[] = array(
+							
+								'name' 	=> $category_row['name'],
+								'url'	=> $this->url->link('category', false, array('slug' => $category_row['slug']))
+							
+							);
+						
+						}					
+					
+					}
+				
+					$menu_category[] = array(
+					
+						'name' 	=> $row['name'],
+						'url'	=> $this->url->link('category', false, array('slug' => $row['slug'])),
+						'data'	=> $category_data
+					
+					);
+				
+				}
+				
+				$this->cache->set('menu_category', $menu_category);
+			
+			}
+		
+		}
+		
+		$this->data['menu_category']	= $menu_category;
+		
+		$this->data['project_url'] 			= $this->url->link("project");
+		$this->data['single_project_url'] 	= $this->url->link("project", "single");
+		$this->data['trading_project_url'] 	= $this->url->link("project", "trading");
+		$this->data['moveto_url'] 			= $this->url->link("moveto");
+		$this->data['add_post_url'] 		= $this->url->link("add_post", false, array('category' => 'emlak'), array('step' => 1));
+		$this->data['move_request_url'] 	= $this->url->link("move_request", false, array(), array('step' => 1));
+		$this->data['move_url'] 			= $this->url->link("move");
+		$this->data['all_move_request_url'] = $this->url->link("move", "request");
+		$this->data['transport_url'] 		= $this->url->link("move", "transport");
+		
+		$this->template = 'menu.html';
+		
+		$this->render();
+	}
+}
+?>

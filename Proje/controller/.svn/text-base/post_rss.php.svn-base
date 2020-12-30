@@ -1,0 +1,87 @@
+<?php  
+
+Class ControllerPostRss Extends Controller {
+	
+	public function index() {
+	
+		$this->load->model('category');
+		$this->load->model('image');
+	
+		$category = $this->model_category->get_category_details($this->request->get('slug'));
+		
+		if ( !$category->current ) {
+		
+			return $this->forward('error');
+		
+		}
+		 
+		header('content-type: text/xml');
+		
+		$xml = new SimpleXMLElement('<rss></rss>');
+		$xml->addAttribute('version', '2.0');
+		
+		$channel = $xml->addChild('channel');
+		$channel->addChild('title', 'anahtarim.com');
+		$channel->addChild('link', HTTP_SERVER);
+		$channel->addChild('description', $this->config->get('site_description'));
+		$image = $channel->addChild('image');
+		$image->addChild('url', HTTP_SERVER . 'view/images/logo.png');
+		$image->addChild('title', 'anahtarim.com');
+		$image->addChild('link', HTTP_SERVER);
+		
+		$sql = "			
+			SELECT
+				p.id,
+				p.name,
+				p.description,
+				(SELECT image FROM post_image WHERE post_id = p.id ORDER BY preview, sort_order ASC LIMIT 1) AS image,
+				p.slug,
+				p.price,
+				p.currency,
+				c.slug AS category,
+				city.name AS city,
+				town.name AS town
+			FROM
+				post p
+				LEFT JOIN category c ON p.category_id = c.id
+				LEFT JOIN post_category pc ON p.id = pc.post_id
+				LEFT JOIN post_location pl ON p.id = pl.post_id 
+				LEFT JOIN city city ON pl.city_id = city.id
+				LEFT JOIN town town ON pl.town_id = town.id
+			WHERE 
+				pc.category_id = '".$this->db->escape($category->current['id'])."'
+				AND p.status = '1'
+				AND p.date_published > '".date('Y-m-d', strtotime(date('Y-m-d') . ' - 3 months'))."'
+			GROUP BY p.id
+			ORDER BY p.date_published DESC LIMIT 50
+		";
+		
+		$query = $this->db->query($sql);
+		
+		if ( $query->rows ) {
+		
+			foreach ( $query->rows as $row ) {
+			
+				$item = $channel->addChild('item');
+				
+				$item->addChild('link', $this->url->link('post', false, array('category' => $row['category'], 'post_slug' => $row['slug'], 'post_id' => $row['id'])));
+				$item->addChild('title', $row['name'] . ' [' . number_format($row['price']) . ' ' . $row['currency'] . ']');
+				
+				$description = "
+				<img src=\"{$this->model_image->resize($row['image'], 100, 100)}\" /><br /><b>{$row['city']} / {$row['town']}</b> <br />
+				".mb_substr(htmlspecialchars(strip_tags($row['description'])), 0, 200)."...
+				";
+				
+				$item->addChild('description', $description);
+				
+			}
+		
+		}
+		
+		echo $xml->asXML();
+				
+	}
+
+}
+
+?>

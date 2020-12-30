@@ -1,0 +1,130 @@
+<?php  
+
+Class ControllerCategory Extends Controller {
+	
+	public function index() {
+	
+		$this->load->model('category');
+		$this->load->model('post');
+		$this->load->model('location');
+	
+		$category = $this->model_category->get_category_details($this->request->get('slug'));
+		
+		if ( !$category->current ) {
+		
+			return $this->forward('error');
+		
+		}
+		
+		if ( $this->request->get('rss') == 'true' ) {
+		
+			return $this->forward('post_rss');
+		
+		}
+		
+		$this->document->setTitle(($category->current['page_title'] ? $category->current['page_title'] : $category->current['name']));
+		$this->document->setKeywords($category->current['meta_keyword']);
+		$this->document->setDescription($category->current['meta_description']);
+		
+		$this->data['category_data'] = array();
+		
+		$query = $this->db->query("SELECT * FROM category WHERE parent = '".(int)$category->current['id']."' AND status = '1'");
+		
+		if ( $query->rows ) {
+		
+			foreach ( $query->rows as $row ) {
+			
+				$this->data['category_data'][] = array(
+				
+					'name' 	=> $row['name'],
+					'url'	=> $this->url->link('category', false, array('slug' => $row['slug']))
+				
+				);
+			
+			}
+		
+		}		
+		
+		$this->data['category'] 		= $category->current;
+		$this->data['category_parent'] 	= $category->parent;
+		$this->data['breakcrumbs'] 		= $category->fields;
+		
+		$this->data['premium_preserve'] 	= $this->model_post->getPreserve($category->current['id'], 'category_premium');
+		$this->data['category_preserve'] 	= $this->model_post->getPreserve($category->current['id'], 'category', 15);
+		
+		$this->data['add_post_url'] = $this->url->link('add_post', false, array('category' => $category->parent['tag']), array('step' => 1));		
+		$this->data['search_url'] 	= $this->url->link('post_search', false, array('category' => $category->current['tag']));		
+		
+		// MAP
+		
+		if ( $this->customer->isLogged() ) {
+		
+			$location = $this->model_location->getCityLocation($this->customer->get('city_id'));
+		
+			if ( $location ) {
+		
+				$this->data['map_coordinates']['lat'] 	= $location['lat'];
+				$this->data['map_coordinates']['lon'] 	= $location['lon'];
+				$this->data['map_coordinates']['zoom'] 	= (int)$this->config->get('map_city_zoom');
+			
+			}
+			
+			$this->data['map_city'] = $this->customer->get('city_id');
+		
+		}
+		
+		if ( !isset($this->data['map_coordinates']) ) {
+		
+			$this->data['map_coordinates']['lat'] 	= $this->config->get('map_tr_lat');
+			$this->data['map_coordinates']['lon'] 	= $this->config->get('map_tr_lon');
+			$this->data['map_coordinates']['zoom'] 	= (int)$this->config->get('map_country_zoom');		
+		
+		}
+		
+		if ( !isset($this->data['map_city']) ) {
+		
+			$this->data['map_city'] = 0;	
+		
+		}
+
+		$this->data['post_types'] 		= $this->model_post->getPostMapMarkerTypes($category->parent['id']);
+		
+		$this->data['map_search_url'] 	= $this->url->link("_ajax_services", "getMapPost");
+		$this->data['get_town_url'] 	= $this->url->link('_ajax_services', 'getTowns');
+		$this->data['get_district_url'] = $this->url->link('_ajax_services', 'getDistricts');		
+		
+		$this->data['map_category'] 	= $this->model_category->get_sub_categories($category->parent['id']);
+		
+		$this->data['map_cities'] 		= $this->model_location->getCities();
+		
+		if ( $category->parent['tag'] == 'emlak' ) {
+		
+			$this->data['latest_estates'] = $this->model_post->getLatestEstates();
+				
+			$this->template = 'category_estate.html';
+		
+		} else if ( $category->parent['tag'] == 'vasita' ) {
+		
+			$this->data['latest_vehicles']	= $this->model_post->getLatestVehicles(8);
+
+			$this->template = 'category_vehicle.html';
+
+		} else {
+
+			return $this->forward('error');
+
+		}		
+	
+		$this->children = array(
+			'header',
+			'menu',
+			'footer'
+		);		
+						
+		$this->response->set($this->render());		
+				
+	}
+
+}
+
+?>

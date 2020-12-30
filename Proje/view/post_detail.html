@@ -1,0 +1,141 @@
+{$header}
+{$menu}
+<div id="content" class="specialBG x2">
+  <div class="container postDetail">
+      <div class="row">
+        <div class="box col-xs-12 col-md-10 col-md-offset-1 noPadding">
+
+          <div class="col-xs-12 col-sm-8 postContent">
+
+            <span class="col-xs-12 headLine"><h1>{$post_title}</h1></span>
+            <div class="col-xs-12 postImage">
+                {if count($post_images) == 1}
+                <img class="lazy" src="{$post_images.0.big}" data-original="{$post_images.0.big}" title="" alt=""> {*src="view/images/dot.png"*}
+                {else}
+                <div class="latestVideos noPadding">
+                  {foreach from = $post_images item = i key = k}
+                    <div class="item">
+                        <img src="{$i.big}" title="{$post_title}" alt="{$post_title}">
+                    </div>
+                  {/foreach}
+                </div>
+                {/if}
+            </div>
+            <div class="col-xs-12 postDescription noPadding">{$post_description}</div>
+
+            {if $post_video}
+            {if $post_video_name}<b><h2>{$post_video_name}</h2></b>{/if}
+            <div class="col-xs-12 postVideo noPadding">
+              <div class="embed-responsive embed-responsive-16by9">
+                <iframe class="embed-responsive-item" src="{$post_video}"></iframe>
+              </div>
+            </div>
+            {/if}
+
+            <div class="col-xs-12 postInfo">
+              {$post_date_added}{if $post_date_updated} (Güncellendi: {$post_date_updated}){/if}
+              <div class="col-xs-12 noPadding postAttr">
+                <div class="postShare">
+                    <span class="head">Haberi paylaş: </span>
+                    <a href="{$post_share.facebook}" target="_blank"><i class="fa share fb fa-facebook" aria-hidden="true"></i></a>
+                    <a href="{$post_share.twitter}" target="_blank"><i class="fa share t fa-twitter" aria-hidden="true"></i></a>
+                    <a href="{$post_share.whatsapp}"  data-action="share/whatsapp/share"><i class="fa share wp fa-whatsapp" aria-hidden="true"></i></a>
+                </div>
+                <div class="postRatio">
+                    <span class="head">Haberi oyla</span>
+                    <i data-ratio="like" data-post="{$post_id}" class="ratioController fa ratio up fa-thumbs-up" aria-hidden="true"></i>
+                    <span id="post_like">{$post_like}</span>
+                    <i data-ratio="dislike" data-post="{$post_id}" class="ratioController fa ratio down fa-thumbs-down" aria-hidden="true"></i>
+                    <span id="post_dislike">{$post_dislike}</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+          <div class="col-xs-12 col-sm-4 mostNews noPadding">
+            {if $most_read}
+            <span class="col-xs-12 headLine">EN ÇOK OKUNAN HABERLER</span>
+            <div class="col-xs-12 itemSmallGroup noPadding">
+              {foreach from = $most_read item = i key = k}
+               <div class="col-xs-6 col-sm-12 itemSmall">
+                 <a href="{$i.url}" title="{$i.name}">
+                   <div class="col-xs-12 item{if $i%2==1} x2{/if}">
+                     <div class="col-xs-12 col-sm-6 image noPadding">
+                        <img class="lazy" src="view/images/dot.png" data-original="{$i.image}" title="{$i.name}" alt="{$i.name}">
+                         {if $i.video}<div class="videoBox"><div class="playIcon list"></div></div>{/if}
+                     </div>
+                     <div class="col-xs-12 col-sm-6 itemTitle noPadding">
+                       <h2>{$i.name_cut}</h2>
+                     </div>
+                   </div>
+                 </a>
+               </div>
+             {/foreach}
+            </div>
+            {/if}
+          </div>
+
+          {if $items}
+              <span class="col-xs-12 headLine">İLGİLİ HABERLER</span>
+              {foreach from = $items item = value key = k}
+              <div class="col-xs-12 itemListGroup {if $k%2==0}x2{/if} noPadding">
+                {foreach from = $value item = i key = k}
+                <div class="col-xs-6 col-sm-2 itemList noPadding">
+                <a href="{$i.url}" title="{$i.name}">
+                  <div class="item">
+                    <div class="image">
+                        <img class="lazy" src="view/images/dot.png" data-original="{$i.image}" title="{$i.name}" alt="{$i.name}">
+                        {if $i.video}<div class="videoBox"><div class="playIcon small"></div></div>{/if}
+                    </div>
+                    <div class="itemTitle">
+                      <h2>{$i.name_cut}</h2>
+                    </div>
+                  </div>
+                </a>
+                </div>
+                {/foreach}
+              </div>
+              {/foreach}
+          {/if}
+
+  	   </div>
+    </div>
+  </div>
+</div>
+<script type="text/javascript">
+	var ratio_url 			= "{$ratio_url}";
+
+  {literal}
+ 	$('.ratioController').click(function(){
+
+ 		   var dataRatio	  = $(this).attr('data-ratio');
+       var dataPost		  =	$(this).attr('data-post');
+       var dataRatioNum	=	$(this).attr('data-ratioNum');
+
+ 			 $.ajax({
+ 				url		: ratio_url,
+ 				type	: 'POST',
+ 				dataType: 'JSON',
+ 				data	: 	{
+ 								post: dataPost,
+         				ratio: dataRatio,
+ 							},
+ 				success	: function(json) {
+
+  					if(json['success']){
+
+                $( 'span#post_' + dataRatio ).html(json['ratio']);
+
+  					}/*else if(json['error']){
+
+              alert(json['error']);
+  					}*/
+
+ 				},
+ 				complete: function () {
+ 				}
+ 			});
+ 	});
+  {/literal}
+</script>
+{$footer}

@@ -1,0 +1,175 @@
+<?php
+
+Class ModelCategory extends Controller{
+	
+	public function get_category_details ( $slug = false ) {
+	
+		$categories = new stdClass();
+		
+		$categories->parent 	= array();
+		$categories->current 	= array();
+		$categories->fields		= array();
+	
+		$query = $this->db->query("SELECT * FROM category WHERE slug = '" . $slug . "'");
+		
+		$category_data = array();
+		
+		if ( $query->rows ) {
+	
+			$category_data = $this->get_category($query->row['id']);
+		
+		}
+		
+		if ( $category_data ) {
+		
+			foreach ( $category_data as $category ) {
+			
+				$categories->fields[] = array(
+				
+					'id' 				=> $category['id'],
+					'name'				=> $category['name'],
+					'page_title'		=> $category['page_title'],
+					'meta_description'	=> $category['meta_description'],
+					'meta_keyword'		=> $category['meta_keyword'],
+					'tag'				=> $category['slug'],
+					'url'				=> $this->url->link('category', false, array('slug' => $category['slug'])),
+				
+				);
+			
+			}
+			
+			$categories->parent 	= end($categories->fields);
+			$categories->current 	= reset($categories->fields);
+			
+			asort($categories->fields);
+			
+		}
+		
+		return $categories;
+		
+	}
+	
+	private function get_category ($id, $list = array()) {
+	
+		$query = $this->db->query("SELECT * FROM category WHERE id = '" . $id . "'");
+		
+		if ( $query->rows ) {
+			
+			$list[] = $query->row;
+			
+			if ( $query->row['parent'] != 0 ) {
+			
+				$list = $this->get_category($query->row['parent'], $list);
+			
+			}
+			
+		}
+		
+		return $list;
+	
+	}
+	
+	public function get_sub_categories ($parent) {
+	
+		$query = $this->db->query("SELECT id, name FROM category WHERE parent = '".(int)$parent."' AND status = '1' ORDER BY sort_order, name ASC");
+		
+		$data = array();
+		
+		if ( $query->rows ) {
+		
+			foreach ( $query->rows as $row ) {
+			
+				$data[] = array(
+				
+					'id' 	=> $row['id'],
+					'name'	=> $row['name'],
+				
+				);
+			
+			}
+		
+		}
+		
+		return $data;
+	
+	}
+	
+	public function get_parent_tree ($id, $list = array()) {
+	
+		$query = $this->db->query("SELECT * FROM category WHERE id = '" . $id . "'");
+		
+		if ( $query->rows ) {
+		
+			if ( $query->row['parent'] != 0 ) {
+			
+				$categories = $this->get_sub_categories($query->row['parent']);
+				
+				if ( $categories ) {
+				
+					foreach ( $categories as $key => $value ) {
+					
+						$categories[$key]['selected'] = ($value['id'] == $id ? true : false);
+					
+					}
+				
+				}
+				
+				$list[] = $categories;
+				
+				$list 	= $this->get_parent_tree($query->row['parent'], $list);
+			
+			}
+		
+		}
+		
+		return $list;
+	
+	}
+	
+	public function getCategoryOptions ($category_id = false) {
+				
+		if ( !(int)$category_id ) return false; 
+		
+		$options = array();
+		
+		$query = $this->db->query("SELECT o.id AS option_id, o.name AS `option`, o.type, co.value_id, ov.name FROM category_option co LEFT JOIN `option` o ON co.option_id = o.id LEFT JOIN option_value ov ON ov.id = co.value_id WHERE co.category_id = '".(int)$category_id."' ORDER BY o.sort_order, ov.sort_order ASC");
+		
+		if ( $query->rows ) {
+		
+			foreach ( $query->rows as $row ) {
+			
+				if ( !isset($options[$row['option_id']]) ) {
+				
+					$options[$row['option_id']]['id'] 	= $row['option_id'];
+					$options[$row['option_id']]['name'] = $row['option'];
+					$options[$row['option_id']]['type'] = $row['type'];
+					
+					if ( $row['type'] == 'text' ) {
+					
+						$options[$row['option_id']]['value'] = '';
+					
+					} else if ( $row['type'] == 'select' ) {
+					
+						$options[$row['option_id']]['values'] = array();
+					
+					}
+					
+				}
+				
+				if ( $row['type'] == 'select' ) {
+				
+					$options[$row['option_id']]['values'][] = array('id' => $row['value_id'], 'name' => $row['name']);
+				
+				}
+			
+			}
+		
+		}
+		
+		return $options;
+	
+	}	
+	
+}
+
+?>

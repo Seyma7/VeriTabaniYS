@@ -1,0 +1,127 @@
+<?php  
+
+Class ControllerPost Extends Controller {
+	
+	public function index() {
+	
+		$this->load->model('category');
+		$this->load->model('post');
+		$this->load->model('location');
+		$this->load->model('image');
+		$this->load->model('option');
+		$this->load->model('attribute');
+	
+		$category = $this->model_category->get_category_details($this->request->get('category'));
+		
+		if ( !$category->current ) {
+		
+			return $this->forward('error');
+		
+		}
+		
+		$post = $this->model_post->getPost((int)$this->request->get('post_id'));
+		
+		if ( !$post || $post['status'] == -1 || $post['status'] == 0 || $post['category_id'] != $category->current['id'] || $post['slug'] != $this->request->get('post_slug')) {
+		
+			return $this->forward('error');
+		
+		}
+		
+		if ( $this->config->get('estate_parent_id') == $category->parent['id'] ) {
+		
+			$this->data['p_cat_path'] 		= $this->model_post->doEstateTitle($this->model_post->parseCategory($post['category_path']));
+			$this->data['p_cat_path_model'] = false;
+		
+		} else if ( $this->config->get('vehicle_parent_id') == $category->parent['id'] ) {
+		
+			$vpaths = $this->model_post->doVehicleTitle($this->model_post->parseCategory($post['category_path']));
+		
+			$this->data['p_cat_path'] 		= (isset($vpaths[0]) && isset($vpaths[1]) ? $vpaths[0] . ' ' . $vpaths[1] : false);
+			$this->data['p_cat_path_model'] = (isset($vpaths[2]) ? $vpaths[2] : false);
+		
+		} else {
+		
+			return $this->forward('error');
+		
+		}
+		
+		$this->document->setTitle($this->data['p_cat_path'] . ' ' . $post['name']);
+		
+		$this->data['post_id'] 				= $post['id'];
+		$this->data['post_title'] 			= $post['name'];
+		$this->data['post_price'] 			= number_format($post['price']) . ' ' . $post['currency'];
+		$this->data['post_published_data'] 	= date('d.m.Y', strtotime($post['date_published']));
+		$this->data['post_description'] 	= $post['description'];
+		$this->data['post_contact_name'] 	= $post['contact_name'];
+		$this->data['post_address'] 		= $this->model_post->getPostLocation($post['id'], ' / ');
+		$this->data['post_publish_phone'] 	= $post['publish_phone'];
+		$this->data['post_is_active'] 		= ($post['status'] == 1 && strtotime($post['date_published']) > strtotime(date('Y-m-d') . ' - 3 months') ? true : false);
+		$this->data['post_share'] 			= social_share_urls($this->url->link('post', false, array('category' => $category->current['tag'], 'post_slug' => $post['slug'], 'post_id' => $post['id'])), $post['name']);
+		
+		$phones = Array();
+		
+		($post['mobile_phone'] != '' ? array_push($phones, $post['mobile_phone']) : false);
+		($post['work_phone'] != '' ? array_push($phones, $post['work_phone']) : false);
+		($post['home_phone'] != '' ? array_push($phones, $post['home_phone']) : false);
+		
+		$this->data['post_owner_phones'] 	= implode(' | ', $phones);
+		
+		// next post
+		$this->data['next_post'] = $this->model_post->postUrl( $this->model_post->getNextPost($post['id']));
+		
+		// prev post
+		$this->data['prev_post'] = $this->model_post->postUrl( $this->model_post->getPrevPost($post['id']));
+		
+		// post images
+		
+		$images = $this->model_post->getPostImages($post['id']);
+		
+		$this->data['post_images'] = array();
+		
+		if ( $images ) {
+		
+			foreach ( $images as $image ) {
+			
+				$this->data['post_images'][] = array(
+				
+					'thumb' => $this->model_image->resize($image['image'], 93, 59),
+					'big' 	=> $this->model_image->resize($image['image'], 400, 306),
+				
+				);
+			
+			}
+		
+		} else {
+		
+			$this->data['post_images'][] = array(
+			
+				'thumb' => $this->model_image->resize(false, 93, 59),
+				'big' 	=> $this->model_image->resize(false, 400, 306),
+			
+			);			
+		
+		}	
+
+		// post options
+		
+		$this->data['post_options'] 	= $this->model_option->getCategoryOptions($category->current['id'], $this->model_option->getPostOptions($post['id']));
+	
+		// post attributes
+		
+		$this->data['post_attributes'] 	= $this->model_attribute->getCategoryAttributes($category->current['id'], $this->model_attribute->getPostAttributes($post['id']));
+	
+		$this->template = 'post.html';		
+	
+		$this->children = array(
+			'header',
+			'menu',
+			'footer'
+		);		
+						
+		$this->response->set($this->render());		
+				
+	}
+
+}
+
+?>

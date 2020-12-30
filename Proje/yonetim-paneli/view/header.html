@@ -1,0 +1,93 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="tr-TR">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+	<title>{if isset($title)}{$title} - {/if}{$smarty.const.SYSTEM_NAME}</title>
+	<meta name='robots' content='noindex,nofollow' />
+	<base href="{$base}">
+	<link rel="stylesheet" href='view/js/font-awesome/css/font-awesome.min.css' type='text/css' />
+	<link rel="stylesheet" href='view/css/style.css?v=2' type='text/css' />
+	<script type="text/javascript" src="view/js/jquery-1.6.1.min.js"></script>
+	<script type="text/javascript" src="view/js/superfish/js/superfish.js"></script>
+	<script type="text/javascript" src="view/js/tabs.js"></script>
+</head>
+<body>
+{if $isLogged}
+<div id="header">
+	<div class="div1">
+		<div style="float: left"><a href="./"><img src="view/image/haber.png" style="cursor: pointer;" /></a></div>
+		<div class="textmenu">
+			<div class="MenuText">
+				<a href="./" class="MenuText" title="Anasayfaya dön">Anasayfa</a>|
+				<a href="{$logout_url}" class="MenuText">Güvenli Çıkış</a>
+				<div class="loggedinas"><img src="view/image/lock.png" alt="" style="position: relative; top: 3px;" /> {$login_username} olarak giriş yaptınız | Sistem saati: {$system_time}</div>
+			</div>
+		</div>
+		<div class="clear"></div>
+	</div>
+	<div class="div2">
+		<div id="menu">
+			<ul class="left">
+				<li class="_parent"><a href="./" class="top"><span><img src="view/image/home.png" /></span> Anasayfa</a></li>
+				<li class="_parent"><a class="top"><span><img src="view/image/category.png" /></span> Kategoriler</a>
+					<ul>
+						<li><a href="{$category_post_url}"><span><img src="view/image/review.png" /></span> İnternet Gazetesi</a></li>
+					</ul>
+				</li>
+				<li class="_parent"><a class="top"><span><img src="view/image/review.png" /></span> Haber / Yayın</a>
+					<ul>
+						<li><a href="{$post_url}"><span><img src="view/image/review.png" /></span> İnternet Gazetesi</a></li> 
+						<li><a href="{$post_video_url}"><span><img src="view/image/review.png" /></span> Multimedya - Video</a></li>
+					</ul>
+				</li>
+				<li class="_parent"><a href="{$user_url}" class="top"><span><img src="view/image/customer.png" /></span> Hesap</a></li>
+				<li class="_parent"><a href="{$editor_url}" class="top"><span><img src="view/image/customer.png" /></span> Editör</a></li>
+				<li class="_parent"><a class="top"><span><img src="view/image/product.png" /></span> Sistem</a>
+					<ul>
+						<li><a href="{$setting_url}"><span><img src="view/image/setting.png" /></span> Ayarlar</a></li>
+						<li><a href="{$cache_url}"><span><img src="view/image/log.png" /></span> Cache</a></li>
+					</ul>
+				</li>
+			</ul>
+		</div>
+	</div>
+</div>
+<script type="text/javascript">
+{literal}
+$(document).ready(function() {
+	$('#menu > ul').superfish({
+		hoverClass	 : 'sfHover',
+		pathClass	 : 'overideThisToUse',
+		delay		 : 0,
+		animation	 : {height: 'show'},
+		speed		 : 'normal',
+		autoArrows   : false,
+		dropShadows  : false,
+		disableHI	 : false, /* set to true to disable hoverIntent detection */
+		onInit		 : function(){},
+		onBeforeShow : function(){},
+		onShow		 : function(){},
+		onHide		 : function(){}
+	});
+	$('#menu > ul').css('display', 'block');
+
+	$('form[id*=\'Delete\']').submit(function(){
+		if (!confirm("Seçilen kayıtlar silinecek. Emin misiniz? Bu işlem geri alınamaz. Silmek istediğiniz kayıtlar şunları etkileyebilir;\n\n- Bağlantılı alt kategorideki veriler\n- Kayıtlara bağlı tüm özellik ve ayrıcalıklar\n- Görsel ve medya dosyaları")) {
+			return false;
+		}
+	});
+
+	$('form[id*=\'delete\']').submit(function(){
+		if (!confirm("Seçilen kayıtlar silinecek. Emin misiniz? Bu işlem geri alınamaz.")) {
+			return false;
+		}
+	});
+});
+
+{/literal}
+</script>
+<div id="content">
+{if isset($success)}
+<div class="success marg10"><b>Tamamlandı:</b> {$success}</div>
+{/if}
+{/if}

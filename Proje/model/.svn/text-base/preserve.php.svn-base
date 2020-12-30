@@ -1,0 +1,94 @@
+<?php
+
+Class ModelPreserve extends Controller{
+	
+	public function isPostBoldTitle ( $post_id = false ) {
+	
+		if ( !(int)$post_id ) return false; 
+	
+		$query = $this->db->query("SELECT pp.id FROM post_preserve pp LEFT JOIN preserve p ON pp.preserve_id = p.id WHERE pp.post_id = '".(int)$post_id."' AND pp.status = '0' AND p.code = 'bold_title' AND p.type = 'post'");
+		
+		if ( $query->rows ) {
+				
+			return $query->row['id'];
+		
+		}
+		
+		return false;
+	
+	}	
+	
+	public function clearPostBoldTitle ( $post_id = false ) {
+	
+		if ( !(int)$post_id ) return false; 
+		
+		$preserve_id = $this->isPostBoldTitle($post_id);
+			
+		if ( $preserve_id ) {
+				
+			$this->db->query("DELETE FROM post_preserve WHERE id = '".(int)$preserve_id."'");
+		
+		}
+		
+		return false;
+	
+	}		
+	
+	public function addPostBoldTitle ( $post_id = false ) {
+	
+		if ( !(int)$post_id ) return false; 
+		
+		$query =  $this->db->query("SELECT id FROM preserve WHERE code = 'bold_title' AND type = 'post'");
+			
+		if ( $query->rows ) {
+				
+			$this->db->query("INSERT INTO post_preserve SET post_id = '".(int)$post_id."', preserve_id = '".(int)$query->row['id']."', status = '0'");
+		
+		}
+		
+		return false;
+	
+	}	
+	
+	public function getPreserves ( $type = 'post', $preserves = array()) {
+	
+		$query = $this->db->query("SELECT * FROM preserve WHERE type = '".$this->db->escape($type)."'");
+		
+		$data = array();
+		
+		if ( $query->rows ) {
+		
+			foreach ( $query->rows as $row ) {
+			
+				if ( !isset($data[$row['parent']]) ) {
+				
+					$data[$row['parent']]['parent'] 		= $row['parent'];
+					$data[$row['parent']]['name'] 			= $row['name'];
+					$data[$row['parent']]['description'] 	= $row['description'];
+					$data[$row['parent']]['selected'] 		= false;
+					$data[$row['parent']]['values'] 		= array();
+				
+				}
+				
+				$data[$row['parent']]['values'][]			= array('id' => $row['id'], 'name' => ($row['period'] == 0 ? 'İlanınızın yayın süresi boyunca - ' : $row['period'] . ' Hafta - ') . ($row['price'] == 0 ? 'Ücretsiz' : $row['price'] . ' TL'), 'selected' => ($preserves && in_array($row['id'], $preserves) ? true : false));
+			
+				if ( $preserves && in_array($row['id'], $preserves) ) {
+				
+					$data[$row['parent']]['selected'] = true;
+				
+				}
+			
+			}
+		
+		}
+		
+		return $data;
+		
+	
+	}
+	
+
+	
+}
+
+?>

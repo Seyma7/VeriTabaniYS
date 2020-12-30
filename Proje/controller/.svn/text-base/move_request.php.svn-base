@@ -1,0 +1,562 @@
+<?php  
+ 
+Class ControllerMoveRequest Extends Controller {
+
+	public $error 	= array();
+	public $data	= array();
+	
+	public function index() {
+	
+		$steps 	= array(1, 2, 3);
+		$step 	= ((int)$this->request->get('step') < 1 || !$this->request->has('step') ? 1 : (int)$this->request->get('step'));
+		
+		if ( !in_array($step, $steps) ) {
+		
+			return $this->forward('error');
+		
+		}
+		
+		if ( !$this->customer->isLogged() ) {
+		
+			$this->session->set('redirect', $this->url->link('move_request', false, array(), array('step' => (int)$this->request->get('step'))));
+			
+            $this->session->set('error', "İlan yayınlamak için üye girişi yapmalısınız!");
+            
+			$this->redirect($this->url->link('login'));
+		
+		}
+		
+		if ( $this->session->has('error') ) {
+		
+			$this->data['error'] = $this->session->get('error');
+			
+			$this->session->delete('error');
+		
+		}
+		
+		$this->load->model('location');
+
+		$this->document->setTitle('Taşınma Talebi Ekle - ' . $step . '. Adım');
+		
+		if ( $step == 1 ) {
+		
+			// category
+			
+			$query = $this->db->query("SELECT * FROM move_category ORDER BY sort_order ASC");
+			
+			$this->data['categories'] = array();
+			
+			if ( $query->rows ) {
+			
+				foreach ( $query->rows as $row ) {
+				
+					$this->data['categories'][$row['id']] 	= $row;
+				
+				}
+			
+			}		
+
+			if ( $this->request->isPOST() ) {
+			
+				if ( !isset($this->data['categories'][$this->request->post('category')]) ) {
+				
+					$this->session->set('error', 'Lütfen talebinize uygun olan kategoriyi seçin.');
+					
+					$this->redirect($this->url->link("move_request", false, array(), array('step' => 1)));
+				
+				} else {
+				
+					if ( $this->session->has('move_request') ) {
+					
+						$data = $this->session->get('move_request');
+					
+					} else {
+					
+						$data = array(
+						
+							'category' 				=> array(),
+							'name'					=> '',
+							'description_type'		=> 2,
+							'description_standart'	=> '',
+							'description_advanced'	=> '',
+							'from_city'				=> 0,
+							'from_town'				=> 0,
+							'from_quarter'			=> 0,
+							'to_city'				=> 0,
+							'to_town'				=> 0,
+							'to_quarter'			=> 0,
+							'day'					=> '',
+							'month'					=> '',
+							'year'					=> '',
+							'cell'					=> '',
+							'params'				=> array(),
+							'images'				=> array(),
+							'image_selected'		=> '',
+						
+						);
+					
+					}				
+				
+					$data['category'] = $this->data['categories'][$this->request->post('category')];
+
+					$this->session->set('move_request', $data);
+					
+					$this->redirect($this->url->link("move_request", false, array(), array('step' => 2)));
+				
+				}
+			
+			}
+			
+			if ( $this->session->has('move_request') ) {
+			
+				$this->data['mr'] = $this->session->get('move_request');
+			
+			} else {
+			
+				$this->data['mr'] = array();
+			
+			}
+		
+			$this->data['estate_url'] 		= $this->url->link('add_post', false, array('category' => 'emlak'), array('step' => 1));
+			$this->data['vehicle_url'] 		= $this->url->link('add_post', false, array('category' => 'vasita'), array('step' => 1));	
+			$this->data['action_url'] 		= $this->url->link("move_request", false, array(), array('step' => 1));	
+		
+			$this->template = 'move_request.html';
+		
+		} else if ( $step == 2 ) {
+
+			if ( $this->session->has('move_request') ) {
+			
+				$this->data['mr'] = $this->session->get('move_request');
+			
+			} else {
+			
+				$this->redirect($this->url->link("move_request", false, array(), array('step' => 1)));
+			
+			}	
+			
+			$this->data['cells'] = array(
+				'Stüdyo (1+0)',
+				'1+1 ',
+				'2+1',
+				'2+2',
+				'3+1',
+				'3+2',
+				'4+1',
+				'4+2',
+				'4+3',
+				'4+4',
+				'5',
+				'5+1',
+				'5+2',
+				'5+3',
+				'5+4',
+				'6',
+				'6+1',
+				'6+2',
+				'6+3',
+				'6+4'
+			);
+			
+			if ( $this->request->isPOST() && $this->validate() ) {
+						
+				$this->data['mr']['name'] 					= $this->request->post('name');
+				$this->data['mr']['description_type'] 		= $this->request->post('description_type');
+				$this->data['mr']['description_standart'] 	= ($this->request->post('description_standart'));
+				$this->data['mr']['description_advanced'] 	= ($this->request->post('description_advanced'));
+				$this->data['mr']['from_city'] 				= $this->request->post('from_city');
+				$this->data['mr']['from_town'] 				= $this->request->post('from_town');
+				$this->data['mr']['from_quarter'] 			= $this->request->post('from_quarter');
+				$this->data['mr']['to_city'] 				= $this->request->post('to_city');
+				$this->data['mr']['to_town'] 				= $this->request->post('to_town');
+				$this->data['mr']['to_quarter'] 			= $this->request->post('to_quarter');
+				$this->data['mr']['day'] 					= $this->request->post('day');
+				$this->data['mr']['month'] 					= $this->request->post('month');
+				$this->data['mr']['year'] 					= $this->request->post('year');
+				$this->data['mr']['cell'] 					= $this->request->post('cell');
+				$this->data['mr']['params'] 				= $this->request->post('params');
+				$this->data['mr']['images'] 				= $this->request->post('images');
+				$this->data['mr']['image_selected'] 		= $this->request->post('image_selected');
+			
+				$this->session->set('move_request', $this->data['mr']);
+				
+				$this->redirect($this->url->link("move_request", false, array(), array('step' => 3)));
+			
+			}	
+			
+			if ( $this->error ) {
+			
+				foreach ( $this->error as $key => $value ) {
+				
+					$this->data['error_' . $key] = $value;
+				
+				}
+				
+				$this->data['error'] = 'Kaydınız sırasında hatalar oluştu. Lütfen kontrol ediniz.';
+			
+			}			
+
+			$this->data['change_category'] 	= $this->url->link('move_request');
+			$this->data['action_url'] 		= $this->url->link('move_request', false, array(), array('step' => 2));	
+			
+			// contact informations
+			$this->data['contact_name'] 		= $this->customer->get('firstname') . ' ' . $this->customer->get('lastname');
+			$this->data['contact_home_phone']	= ($this->customer->get('home_phone') ? '+90-' . $this->customer->get('home_phone') : '&nbsp;');
+			$this->data['contact_work_phone']	= ($this->customer->get('work_phone') ? '+90-' . $this->customer->get('work_phone') : '&nbsp;');
+			$this->data['contact_phone']		= ($this->customer->get('mobile_phone') ? '+90-' . $this->customer->get('mobile_phone') : '&nbsp;');
+			// end contact	
+
+			// post variables
+			$this->data['name'] 				= ($this->request->has('name', 'post') ? $this->request->post('name') : $this->data['mr']['name']);
+			$this->data['description_type'] 	= ($this->request->has('description_type', 'post') && in_array($this->request->post('description_type'), array(1, 2)) ? $this->request->post('description_type') : $this->data['mr']['description_type']);
+			$this->data['description_standart'] = htmlkarakter(($this->request->has('description_type', 'post') && $this->request->post('description_type') == 1 ? $this->request->post('description_standart') : ($this->data['mr']['description_type'] == 1 ? $this->data['mr']['description_standart'] : false)));
+			$this->data['description_advanced'] = htmlkarakter(($this->request->has('description_type', 'post') && $this->request->post('description_type') == 2 ? $this->request->post('description_advanced') : ($this->data['mr']['description_type'] == 2 ? $this->data['mr']['description_advanced'] : false)));
+			
+			$this->data['from_city'] 			= ($this->request->has('from_city', 'post') ? $this->request->post('from_city') : $this->data['mr']['from_city']);
+			$this->data['from_town'] 			= ($this->request->has('from_town', 'post') ? $this->request->post('from_town') : $this->data['mr']['from_town']);
+			$this->data['from_quarter'] 		= ($this->request->has('from_quarter', 'post') ? $this->request->post('from_quarter') : $this->data['mr']['from_quarter']);
+			$this->data['to_city'] 				= ($this->request->has('to_city', 'post') ? $this->request->post('to_city') : $this->data['mr']['to_city']);
+			$this->data['to_town'] 				= ($this->request->has('to_town', 'post') ? $this->request->post('to_town') : $this->data['mr']['to_town']);
+			$this->data['to_quarter']			= ($this->request->has('to_quarter', 'post') ? $this->request->post('to_quarter') : $this->data['mr']['to_quarter']);
+			$this->data['cities'] 				= $this->model_location->getCities();
+			
+			$this->data['from_towns'] = array();
+			
+			if ( $this->data['from_city'] ) {
+			
+				$this->data['from_towns'] = $this->model_location->getTowns($this->data['from_city']);
+			
+			}	
+			
+			$this->data['from_quarters'] = array();
+			
+			if ( $this->data['from_town'] ) {
+			
+				$this->data['from_quarters'] = $this->model_location->getDistricts($this->data['from_town']);
+			
+			}
+			
+			$this->data['to_towns'] = array();
+			
+			if ( $this->data['to_city'] ) {
+			
+				$this->data['to_towns'] = $this->model_location->getTowns($this->data['to_city']);
+			
+			}	
+			
+			$this->data['to_quarters'] = array();
+			
+			if ( $this->data['to_town'] ) {
+			
+				$this->data['to_quarters'] = $this->model_location->getDistricts($this->data['to_town']);
+			
+			}
+			
+			$this->data['get_town_url'] 		= $this->url->link('_ajax_services', 'getTowns');
+			$this->data['get_district_url'] 	= $this->url->link('_ajax_services', 'getDistricts');	
+
+			$this->data['days'] = array();
+			
+			for ( $i = 1; $i <= 31; $i++ ) {
+				
+				$name = ($i < 10 ? "0$i" : $i);
+			
+				array_push($this->data['days'], $name);
+			
+			}
+			
+			$this->data['months'] = array();
+			
+			for ( $i = 1; $i <= 12; $i++ ) {
+			
+				$name = ($i < 10 ? "0$i" : $i);
+				
+				$this->data['months'][] = array(
+					'name' 	=> date("F", mktime(0, 0, 0, 1 + $i, 0, 0)),
+					'value'	=> $name		
+				);
+				
+			}
+			
+			$this->data['years'] = array();
+			
+			for ( $i = date('Y'); $i <= date('Y'); $i++ ) {
+				
+				array_push($this->data['years'], $i);
+				
+			}
+			
+			$this->data['day'] 		= ($this->request->has('day', 'post') ? $this->request->post('day') : $this->data['mr']['day']);
+			$this->data['month'] 	= ($this->request->has('month', 'post') ? $this->request->post('month') : $this->data['mr']['month']);
+			$this->data['year'] 	= ($this->request->has('year', 'post') ? $this->request->post('year') : $this->data['mr']['year']);
+			$this->data['cell'] 	= ($this->request->has('cell', 'post') ? $this->request->post('cell') : $this->data['mr']['cell']);
+			
+			
+			$params 	= ($this->request->has('params', 'post') ? $this->request->post('params') : $this->data['mr']['params']);
+			
+			$query = $this->db->query("SELECT * FROM move_list ORDER BY sort_order, name ASC");
+			
+			$this->data['params'] = array();
+			
+			if ( $query->rows ) {
+			
+				foreach ( $query->rows as $row ) {
+				
+					$item_query = $this->db->query("SELECT * FROM move_list_value WHERE list_id = '".(int)$row['id']."' ORDER BY sort_order, name ASC");
+					
+					if ( $item_query->rows ) {
+					
+						$data = array();
+					
+						foreach ( $item_query->rows as $item_row ) {
+						
+							$data[] = array(
+							
+								'id' 				=> $item_row['id'],
+								'name' 				=> $item_row['name'],
+								'selected'			=> (isset($params[$item_row['id']]) && isset($params[$item_row['id']]['id']) ? true: false),
+								'params'			=> unserialize($item_row['params']),
+								'selected_param'	=> (isset($params[$item_row['id']]) && isset($params[$item_row['id']]['value']) ? $params[$item_row['id']]['value']: false)
+							
+							);
+						
+						}
+						
+						$this->data['params'][] = array(
+						
+							'name' 		=> $row['name'],
+							'values'	=> $data
+						
+						);
+						
+					
+					}
+				
+				}
+			
+			}
+
+			// end post variables
+			
+			// PHOTO
+			
+			$this->data['images'] =  array();
+			
+			if ( isset($this->data['mr']['images']) && $this->data['mr']['images'] ) {
+			
+				$images = $this->data['mr']['images'];
+			
+			} else if ( $this->request->has('images', 'post') ) {
+			
+				$images = $this->request->post('images');
+			
+			}
+			
+			if ( isset($images) ) {
+			
+				$this->load->model('image');
+				
+				foreach ( $images as $image ) {
+				
+					$this->data['images'][] = array(
+					
+						'image' 	=> $image,
+						'preview'	=> $this->model_image->resize($image, 78, 66)
+						
+					);
+				
+				}
+			
+			
+			}
+			
+			$this->data['image_selected'] = ($this->request->has('image_selected', 'post') ? $this->request->post('image_selected') : $this->data['mr']['image_selected']);
+			
+			// END PHOTO			
+			
+			// CONFIRMATION
+			
+			$this->data['confirmation'] = ($this->request->post('confirmation') == 'on' ? true : false);
+			
+			// END CONFIRMATION	
+
+			$this->data['captcha_url'] 		= $this->url->link('_ajax_services', 'captcha');
+			$this->data['upload_image_url'] = str_replace('&amp;', '&', $this->url->link('_ajax_services', 'uploadMoveRequestImage'));
+            $this->data['edit_contact'] 	= $this->url->link('account', 'edit', array(), array("ref" => (@$_SERVER["REQUEST_URI"])));
+            
+			$this->template = 'move_request_step2.html';
+			
+		} else if ( $step == 3 ) {
+		
+			if ( $this->session->has('move_request') ) {
+			
+				$mr = $this->session->get('move_request');
+			
+			} else {
+			
+				$this->redirect($this->url->link("move_request", false, array(), array('step' => 1)));
+			
+			}	
+			
+			if ( !$mr['name'] || !preg_match('/[0-9]{4}-[0-9]{2}-[0-9]{2}/', $mr['year'] . '-' . $mr['month'] . '-' . $mr['day'])) {
+			
+				$this->redirect($this->url->link("move_request", false, array(), array('step' => 2)));
+			
+			}
+
+			$this->load->library('slug');
+			
+			$slug = new Slug;
+			
+			$this->db->query("
+			INSERT INTO move_request SET
+				category_id 		= '".(int)$mr['category']['id']."',
+				customer_id 		= '".(int)$this->customer->get('id')."',
+				name 				= '".$this->db->escape($mr['name'])."',
+				slug 				= '".$this->db->escape($slug->title($mr['name']))."',
+				description_type 	= '".(int)$mr['description_type']."',
+				description 		= '".$this->db->escape(htmlkarakter((int)$mr['description_type'] == 2 ? $mr['description_advanced'] : $mr['description_standart']))."',
+				from_city 			= '".(int)$mr['from_city']."',
+				from_town 			= '".(int)$mr['from_town']."',
+				from_quarter 		= '".(int)$mr['from_quarter']."',
+				to_city 			= '".(int)$mr['to_city']."',
+				to_town 			= '".(int)$mr['to_town']."',
+				to_quarter 			= '".(int)$mr['to_quarter']."',
+				move_date 			= '".$this->db->escape($mr['year'] . '-' . $mr['month'] . '-' . $mr['day'])."',
+				cell 				= '".$this->db->escape($mr['cell'])."',
+				date_added			= NOW()
+			");
+			
+			$id = $this->db->getLastId();
+			
+			if ( $mr['images'] ) {
+			
+				foreach ( $mr['images'] as $key => $value ) {
+				
+					$preview = ($mr['image_selected'] == $value ? 1 : 2);
+					
+					$this->db->query("INSERT INTO move_image SET id = '".(int)$id."', image = '".$this->db->escape($value)."', preview = '".(int)$preview."', sort_order = '".(int)$key."'");
+				
+				}
+			
+			}	
+			
+			if ( $mr['params'] ) {
+			
+				foreach ( $mr['params'] as $param ) {
+				
+					if ( isset($param['id']) && $param['id'] ) {
+					
+						$value = (isset($param['value']) && $param['value'] ? $param['value'] : false);
+						
+						$this->db->query("INSERT INTO move_request_value SET id = '".(int)$id."', value_id = '".(int)$param['id']."', value = '".$this->db->escape($value)."'");						
+					
+					}
+				
+				}
+			
+			}
+			
+			$this->session->delete('move_request');
+			
+			$this->redirect(HTTP_SERVER);
+			
+		}
+		
+		$this->data['error'] = (isset($this->data['error']) ? $this->data['error'] : false);
+	
+		$this->children = array(
+			'header',
+			'menu',
+			'footer'
+		);		
+						
+		$this->response->set($this->render());		
+				
+	}
+	
+	private function validate () {
+	
+		if ( $this->request->post('captcha') != $this->session->get('captcha') ) {
+
+			$this->error['captcha'] = 'Doğrulama kodunu kontrol ediniz.';
+
+		}	
+		
+		if ( $this->request->post('confirmation') != 'on' ) {
+
+			$this->error['confirmation'] = 'Kullanım koşullarını kabul etmelisiniz.';
+
+		}		
+
+		if ( $this->request->has('cell', 'post') ) {
+		
+			if ( !in_array($this->request->post('cell'), $this->data['cells']) ) {
+
+				$this->error['cell']  = 'Tahmini ağırlığı seçin.';
+			
+			}
+			
+		}
+		
+		if ( !preg_match('/[0-9]{4}-[0-9]{2}-[0-9]{2}/', $this->request->post('year') . '-' . $this->request->post('month') . '-' . $this->request->post('day')) ) {
+		
+			$this->error['date']  = 'Tahmini taşıma tarihini kontrol edin.';
+		
+		}
+		
+		if ( $this->request->has('from_city', 'post') ) {
+		
+			if ( !$this->request->post('from_city') || !$this->request->post('from_town') || !$this->request->post('from_quarter') ) {
+
+				$this->error['from_where']  = 'Taşınan yeri seçin.';
+			
+			}			
+		
+		}	
+		
+		if ( $this->request->has('to_city', 'post') ) {
+		
+			if ( !$this->request->post('to_city') || !$this->request->post('to_town') || !$this->request->post('to_quarter') ) {
+
+				$this->error['to_where']  = 'Taşınacak yeri seçin.';
+			
+			}			
+		
+		}
+	
+		if ( $this->request->post('description_type') == 1 ) {
+
+			if ( strlen(trim($this->request->post('description_standart'))) < 5 ) {
+
+				$this->error['description'] = 'İlan açıklamasını giriniz.';
+
+			}		
+		
+		} else if ( $this->request->post('description_type') == 2 ) {
+
+			if ( strlen(trim($this->request->post('description_advanced'))) < 5 ) {
+
+				$this->error['description'] = 'İlan açıklamasını giriniz.';
+
+			}		
+		
+		} else {
+
+			$this->error['description'] = 'İlan açıklamasını giriniz.';	
+		
+		}	
+		
+		if ( strlen(trim($this->request->post('name'))) < 5 ) {
+
+			$this->error['name'] = 'İlan başlığını giriniz.';
+
+		}
+
+		return ($this->error ? false : true);
+	
+	}
+
+}
+
+?>

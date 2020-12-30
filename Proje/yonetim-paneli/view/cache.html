@@ -1,0 +1,53 @@
+{$header}
+<script type="text/javascript" src="view/js/FusionCharts.js"></script>
+<div class="box_head"></div>
+<div class="box_body">
+	<div class="heading_title">{$title}</div>
+	<div class="heading_desc">Sistemin otomatik olarak oluşturduğu cache dosyalarını silerek datanın yenilenmesini sağlayabilirsiniz. İlgili dataların klasör sekmesine tıklayarak dosyaları tek tek yada toplu şekilde silebilirsiniz.</div>
+	<div class="buttons"><a onClick="$('form#cachedelete').submit();" class="button">Seçili dosyaları Sil</a></div>
+	{if $caches}
+	<form action="{$action}" method="post" autocomplete="off" id="cachedelete">
+		<table class="list">
+			<tr class="head">
+				<td width="1%" align="center"><input type="checkbox" onclick="$('input[type=\'checkbox\']').attr('checked', this.checked);" /></td>
+				<td width="1%"></td>
+				<td width="58%">Dosya Adı</td>
+				<td width="15%">Oluşturulma Tarihi</td>
+				<td width="15%">Bitiş Tarihi</td>
+				<td width="10%">Cache Süresi</td>
+			</tr>
+			{foreach from = $caches key = k item = i}
+			<tr class="gridrow_">
+				<td align="center"><input type="checkbox" onclick="$('input[name*=\'{$k}\']').attr('checked', this.checked);" /></td>
+				<td><a href="javascript:;" id="{$k}"><img src="view/image/folder.png" /></a></td>
+				<td>{$k}</td>
+				<td>-</td>
+				<td>-</td>
+				<td>-</td>
+			</tr>
+			{if $i}{foreach from = $i item = c}
+			<tr class="gridrow_ subItems {$k}" style="display: none;">
+				<td align="center"><input type="checkbox" name="selected[{$c.file}][]" value="{$c.file}" /></td>
+				<td></td>
+				<td>{$c.file}</td>
+				<td>{$c.create}</td>
+				<td>{$c.expire}</td>
+				<td>{$c.duration}</td>
+			</tr>
+			{/foreach}{/if}
+			{/foreach}
+		</table>
+	</form>
+	{else}
+	<div class="attention"><b>Uyarı: </b> Kayıtlı cache dosyası bulunamadı.</div>
+	{/if}
+</div>
+<script type="text/javascript">
+$('form#cachedelete a').click(function(){
+
+	$('.subItems').hide();
+	$('tr[class*="' + $(this).attr('id') + '"]').show();   
+
+});
+</script>
+{$footer}

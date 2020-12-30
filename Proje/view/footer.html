@@ -1,0 +1,46 @@
+<link rel="stylesheet" href="view/assets/bootstrap/js/bootstrap.min.js">
+<div class="container-fluid" id="footer">
+	<div class="container ">
+		<div class="row">
+        <div class="box col-xs-12 col-md-10 col-md-offset-1 noPadding">
+		 		<div class="col-xs-12 hidden-xs col-sm-6"></div>
+		 		<div class="col-xs-12 col-sm-6 info">
+					<div class="col-xs-12 col-sm-6 "></div>
+		 			<div class="col-xs-12 col-sm-6 item">
+		 				<h2 class="footerMenu" data-type="about"  data-toggle="collapse" data-target="#about">SİTEMİZ HAKKINDA</h2>
+		 				<ul id="about"  class="nav nav-pills nav-stacked">
+						    <li><a href="{$about_url}">Hakkında</a></li>
+						    <li><a href="{$privacy_url}">Hukuki Şartlar & Gizlilik</a></li>
+						    <li><a href="{$contact_us_url}">Bize Ulaşın</a></li>
+					 	</ul>
+						{if $social_urls}
+						<div class="col-xs-12  noPadding socialMedia">
+              <div class="postShare">
+                  {if isset($social_urls.twitter)}<a href="{$social_urls.twitter}" target="_blank"><i class="fa share t fa-twitter" aria-hidden="true"></i></a>{/if}
+                  {if isset($social_urls.gmail)}<a href="{$social_urls.gmail}" target="_blank"><i class="fa share g fa-google" aria-hidden="true"></i></a>{/if}
+                  {if isset($social_urls.youtube)}<a href="{$social_urls.youtube}" target="_blank"><i class="fa share yt fa-youtube-play" aria-hidden="true"></i></a>{/if}
+                  {if isset($social_urls.linkedin)}<a href="{$social_urls.linkedin}" target="_blank"><i class="fa share in fa-linkedin" aria-hidden="true"></i></a>{/if}
+                  {if isset($social_urls.pinterest)}<a href="{$social_urls.pinterest}" target="_blank"><i class="fa share pin fa-pinterest-p" aria-hidden="true"></i></a>{/if}
+              </div>
+            </div>
+						{/if}
+		 			</div>
+		 		</div>
+
+				<div id="footerMenu" class="visible-xs-block hidden-sm hidden-md hidden-lg noPadding"><i id="showFooterParentMenu" class="fa bar leftBar fa-bars" data-type="menu" aria-hidden="true"></i></div>
+			</div>
+	 	</div>
+	</div>
+</div>
+<script type="text/javascript">
+	$('#showFooterParentMenu').click(function(){
+		$('#footer .info ').toggleClass('show');
+	});
+	$('#footer h2.footerMenu').click(function(){
+			var item  = $(this).attr('data-type');
+			$('#footer .nav.show').not("#" + item).removeClass('show');
+			$('#footer #' + item ).toggleClass('show');
+	});
+</script>
+</body>
+</html>

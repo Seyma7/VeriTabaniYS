@@ -1,0 +1,19 @@
+<?php  
+class ControllerMoveto extends Controller {
+	public function index() {
+	
+		$this->document->setTitle('Taşınıyorum');
+		
+		$this->template = 'moveto.html';
+		$this->children = array(
+			'header',
+			'menu',
+			'footer'
+		);		
+						
+		$this->response->set($this->render());
+	}
+	
+
+}
+?>

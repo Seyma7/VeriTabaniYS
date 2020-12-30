@@ -1,0 +1,44 @@
+<?php
+Class ModuleHeader extends Controller{
+	protected function fetch(){
+	
+		$this->data['title'] 		= $this->document->getTitle();
+		$this->data['keywords']		= ($this->document->getKeywords() ? $this->document->getKeywords() : $this->config->get('keywords'));
+		$this->data['description']	= ($this->document->getDescription() ? $this->document->getDescription() : $this->config->get('description'));
+		
+		if($this->customer->isLogged()){
+			$this->data['isLogged'] = true;
+		} else {
+			$this->data['isLogged'] = false;
+		}		
+		
+		$this->data['login_action'] 		= $this->url->link('login');
+		$this->data['forgotten_pwd_url'] 	= $this->url->link('forgotten_pwd');
+		$this->data['signup_url'] 			= $this->url->link('signup');
+		$this->data['logout_url'] 			= $this->url->link('logout', false, array(), array('a' => 'b', 'c' => 'd'));
+		
+		if ($this->request->get('controller') != 'login' && !$this->request->has('redirect_url', 'post')) {
+		
+			if (isset($_SERVER['REQUEST_URI'])) {
+			
+				$path = str_replace(str_replace('index.php', '', $_SERVER['SCRIPT_NAME']), '', $_SERVER['REQUEST_URI']);
+			
+			} else {
+			
+				$path = '';
+			
+			}
+			
+		
+			$this->data['redirect_url'] 		= HTTP_SERVER . $path;
+		
+		}
+		
+		$this->data['customer_name'] = $this->customer->get('firstname') . ' ' . $this->customer->get('lastname');
+		
+		$this->template = 'header.html';
+		
+		$this->render();
+	}
+}
+?>

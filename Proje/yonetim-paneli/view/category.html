@@ -1,0 +1,53 @@
+{$header}
+{if isset($error)}<div class="error_gen marg10"><b>Hata:</b> {$error}</div>{/if}
+<div class="box_head"></div>
+<div class="box_body">
+	<div class="heading_title">{$title}{if $current_category_path} : {$current_category_path}{/if}</div>
+	<div class="heading_desc">Haber kategorisi ekleyebilir, varolanları düzeltip silebilirsiniz. Sistem sınırsız kategori hiyerarşisine sahiptir. Yeni bir kategori eklemek için aşağıdaki <i>Yeni Kategori Ekle</i> butonunu tıklayınız.</div>
+	<div class="buttons">
+		<div style="margin-bottom:10px;">
+			<form id="search" method="get" autocomplete="off">
+				<input type="hidden" name="controller" value="category"/>
+				{if isset($parent)}
+					<input type="hidden" name="parent" value="{$parent}"/>
+				{/if}
+				<input type="text" name="search_query" value="{if isset($search_query)}{$search_query}{/if}" placeholder="Kategori Adı" class="input1"> <a href="javascript:;" onclick="$('form#search').submit();" class="button">Ara</a>
+			</form>
+		</div>
+		<a href="{$insert}" class="button">Yeni Kategori Ekle</a> <a onClick="$('form#categoryDelete').submit();" class="button">Seçili Kategorileri Sil</a>
+	</div>
+	{if $categories}
+	<form action="{$action}" method="post" autocomplete="off" id="categoryDelete">
+		<table class="list">
+			<tr class="head">
+				<td width="1%" align="center"><input type="checkbox" onclick="$('input[name*=\'selected\']').attr('checked', this.checked);" /></td>
+				<td width="2%"></td>
+				<td width="19%"><a href="{$link.name.url}" class="{$link.name.class}">Kategori Adı</a></td>
+				<td width="20%"><a href="{$link.page_title.url}" class="{$link.page_title.class}">Kategori Sayfa Başlığı</a></td>
+				<td align="center" width="10%"><a href="{$link.sort_order.url}" class="{$link.sort_order.class}">Sıralama</a></td>
+				<td width="15%"><a href="{$link.date_added.url}" class="{$link.date_added.class}">Eklenme Tarihi</a></td>
+				<td width="15%"><a href="{$link.date_updated.url}" class="{$link.date_updated.class}">Güncellenme Tarihi</a></td>
+				<td width="5%" class="center"><a href="{$link.status.url}" class="{$link.status.class}">Durumu</a></td>
+				<td width="10%" align="right">İşlem</td>
+			</tr>
+			{foreach from = $categories item = i}
+			<tr class="gridrow_">
+				<td align="center"><input type="checkbox" name="selected[]" value="{$i.id}" /></td>
+				<td width="2%"><a href="{$i.url}"><img src="view/image/folder.png" /></a></td>
+				<td>{$i.name}</td>
+				<td>{$i.page_title}</td>
+				<td align="center">{$i.sort_order}</td>
+				<td>{$i.date_added}</td>
+				<td>{$i.date_updated}</td>
+				<td align="center"><img src="view/image/{if $i.status == 1}active{else}passive{/if}.png" /></td>
+				<td align="right"> [<a href="{$i.edit}">düzenle</a>]</td>
+			</tr>
+			{/foreach}
+		</table>
+	</form>
+	{if $pagination}<div class="pagination">{$pagination}</div>{/if}
+	{else}
+	<div class="attention"><b>Uyarı: </b> Kayıtlı kategori bulunamadı.</div>
+	{/if}
+</div>
+{$footer}

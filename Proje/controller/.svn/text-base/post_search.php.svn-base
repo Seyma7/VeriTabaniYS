@@ -1,0 +1,377 @@
+<?php  
+class ControllerPostSearch extends Controller {
+
+	public function index() {
+	
+		$this->load->model('category');
+		$this->load->model('post');
+		$this->load->model('location');
+		$this->load->model('post_search');
+		$this->load->model('option');
+		$this->load->model('image');
+	
+		$category = $this->model_category->get_category_details($this->request->get('category'));
+		
+		if ( !$category->current ) {
+		
+			return $this->forward('error');
+		
+		}	
+	
+		$this->document->setTitle(($category->current['page_title'] ? $category->current['page_title'] : $category->current['name']));
+		$this->document->setKeywords($category->current['meta_keyword']);
+		$this->document->setDescription($category->current['meta_description']);
+		
+		$this->data['breakcrumbs'] 	= $this->model_post_search->breadcrumbs($category->fields);
+		$this->data['categories'] 	= $this->model_post_search->category_tree($category->fields);
+		$this->data['options'] 		= $this->model_option->getCategoryOptions($category->current['id']);
+		
+		$selected_options = array();
+		
+		if ( $this->request->get('min_price') &&  $this->request->get('max_price') ) {
+		
+			$min_price 	= (int)str_replace('.', '', $this->request->get('min_price'));
+			$max_price	= (int)str_replace('.', '', $this->request->get('max_price'));
+		
+			$selected_options['price']['min'] = $min_price;
+			$selected_options['price']['max'] = $max_price;
+			
+			$this->data['min_price'] = $min_price;
+			$this->data['max_price'] = $max_price;
+		
+		}
+		
+		foreach ( $_GET as $key => $value ) {
+		
+			if ( $value ) {
+			
+				if ( preg_match('/min/', $key) ) {
+			
+					$min = $key;
+					$max = str_replace('min', 'max', $key);
+					
+					if ( $this->request->get($min) &&  $this->request->get($max) ) {
+					
+						$selected_options['min_max'][(int)str_replace('opt_min_', '', $key)] = array(
+						
+							'min' 	=> $this->request->get($min),
+							'max'	=> $this->request->get($max)
+							
+						);
+					
+					}
+				
+				} else {
+				
+					if ( preg_match('/opt_/', $key) && !preg_match('/opt_max_/', $key) ) {
+				
+						$selected_options['values'][(int)str_replace('opt_', '', $key)] = $value;
+											
+					}
+				
+				}
+			
+			}
+		
+		}
+		
+		if ( $this->request->get('isPhoto') ) {
+		
+			$selected_options['isPhoto'] = $this->request->get('isPhoto');
+		
+		}	
+		
+		if ( $this->request->get('isVideo') ) {
+		
+			$selected_options['isVideo'] = $this->request->get('isVideo');
+		
+		}		
+		
+		if ( $this->request->get('isMap') ) {
+		
+			$selected_options['isMap'] = $this->request->get('isMap');
+		
+		}
+		
+		$this->data['selected_options'] = $selected_options;
+		
+		if ( $this->request->has('displayItems') && in_array($this->request->get('displayItems'), array('list', 'gallery')) ) {
+		
+			$this->data['displayItems'] = $this->request->get('displayItems');
+		
+		} else {
+		
+			$this->data['displayItems'] = 'list';
+		
+		}
+		
+		// post owners
+		
+		if ( isset($this->data['options'][$this->config->get('post_who_id')]) ) {
+		
+			$this->data['post_owner_id'] 	= $this->config->get('post_who_id');
+			$this->data['post_owners'] 		= $this->data['options'][$this->config->get('post_who_id')]['values'];
+		
+		} else {
+		
+			$this->data['post_owners'] 		= array();
+		
+		}
+		
+		// selected post owner
+		
+		if ( isset($this->data['selected_options']['values']) &&  isset($this->data['selected_options']['values'][$this->config->get('post_who_id')]) ) {
+		
+			$this->data['selected_post_owner'] = $this->data['selected_options']['values'][$this->config->get('post_who_id')];
+		
+		} else {
+		
+			$this->data['selected_post_owner'] = false;
+		
+		}
+		
+		// offsets
+		
+		$this->data['offsets'] 	= array(20, 40, 60, 80, 100);
+		$this->data['offset'] 	= (in_array((int)$this->request->get('offset'), $this->data['offsets']) ? (int)$this->request->get('offset') : reset($this->data['offsets']));
+		
+		//_print($this->data['selected_options']);
+		
+		// columns
+		
+		$query = $this->db->query("SELECT cc.option_id, o.name AS `option` FROM category_column cc LEFT JOIN `option` o ON cc.option_id = o.id WHERE cc.category_id = '".(int)$category->current['id']."' ORDER BY o.sort_order, o.name ASC");
+		
+		$this->data['columns'] = array();
+		
+		if ( $query->rows ) {
+		
+			$this->data['columns'] = $query->rows;
+		
+		}
+		
+		$sql_select = "
+			SELECT
+				p.id,
+				p.name,
+				(SELECT image FROM post_image WHERE post_id = p.id ORDER BY preview, sort_order ASC LIMIT 1) AS image,
+				(SELECT id FROM post_preserve WHERE post_id = p.id AND preserve_id = '10' AND status = '1') AS bold_title,
+				IF((SELECT id FROM post_preserve WHERE post_id = p.id AND preserve_id = '9' AND status = '1'), 1, 0) AS show_up,";
+		
+		if ( $this->data['columns'] ) {
+		
+			foreach ( $this->data['columns'] as $column ) {
+			
+				$sql_select .= "(SELECT IF(o.type = 'text', po.value, (SELECT name FROM option_value WHERE id = po.value)) FROM post_option po LEFT JOIN `option` o ON po.option_id = o.id WHERE po.post_id = p.id AND option_id = '".(int)$column['option_id']."') AS option_value_".(int)$column['option_id'].",";
+			
+			}
+		
+		}	
+				
+		$sql_select .= "
+				p.slug,
+				p.price,
+				p.currency,
+				p.date_published,
+				c.slug AS category,
+				cm.path,
+				city.name AS city,
+				town.name AS town,
+				quarter.name AS quarter
+		";
+		
+		$sql_from = "
+			FROM
+				post p
+				LEFT JOIN category c ON p.category_id = c.id
+				LEFT JOIN post_category pc ON p.id = pc.post_id
+				LEFT JOIN category_mirror cm ON p.category_id = cm.id
+				LEFT JOIN post_location pl ON p.id = pl.post_id 
+				LEFT JOIN city city ON pl.city_id = city.id
+				LEFT JOIN town town ON pl.town_id = town.id
+				LEFT JOIN quarter quarter ON pl.quarter_id = quarter.id";
+
+		$sql_where ="	
+			WHERE 
+				pc.category_id = '".$this->db->escape($category->current['id'])."'
+				AND p.status = '1'
+				AND p.date_published > '".date('Y-m-d', strtotime(date('Y-m-d') . ' - 3 months'))."'";
+				
+		if ( isset($this->data['selected_options']['min_max']) ) {
+		
+			foreach ( $this->data['selected_options']['min_max'] as $key => $value ) {
+			
+				if ( (int)$key ) {
+				
+					$sql_from  .= " LEFT JOIN post_option po_{$key} ON p.id = po_{$key}.post_id";
+					$sql_where .= " AND po_{$key}.option_id = '".$this->db->escape($key)."'";
+					$sql_where .= " AND po_{$key}.value >= '".$this->db->escape($value['min'])."'";
+					$sql_where .= " AND po_{$key}.value <= '".$this->db->escape($value['max'])."'";
+				
+				}
+			
+			}
+		
+		}	
+		
+		if ( isset($this->data['selected_options']['values']) ) {
+		
+			foreach ( $this->data['selected_options']['values'] as $key => $value ) {
+			
+				if ( (int)$key ) {
+				
+					$sql_from  .= " LEFT JOIN post_option po_{$key} ON p.id = po_{$key}.post_id";
+					$sql_where .= " AND po_{$key}.option_id = '".$this->db->escape($key)."'";
+					$sql_where .= " AND po_{$key}.value = '".$this->db->escape($value)."'";
+				
+				}
+			
+			}
+		
+		}				
+		
+		if ( isset($this->data['selected_options']['price']) ) {
+		
+			$sql_where .= " AND p.price >= '".$this->db->escape($this->data['selected_options']['price']['min'])."'";
+			$sql_where .= " AND p.price <= '".$this->db->escape($this->data['selected_options']['price']['max'])."'";
+		
+		}
+		
+		$sql = $sql_select . $sql_from . $sql_where;
+		
+		//$cache_name = 'post_search_sql.' . md5($sql);
+		
+		$query_num_rows = $this->db->query($sql);
+		$query_num_rows	= $query_num_rows->num_rows;
+		
+		$this->data['total_results'] = $this->total_results($query_num_rows);
+		
+		$page 	= (!$this->request->has('page') || (int)$this->request->get('page') < 1 ? 1 : (int)$this->request->get('page'));
+		$limit 	= $this->data['offset'];
+		$start	= ($page - 1 ) * $limit; 
+		
+		$sql .= " GROUP BY p.id";
+		
+		switch ($this->request->get('sort')) {				
+			default:
+				$sql .= ' ORDER BY p.date_published DESC, show_up DESC';
+				break;				
+		}	
+
+		$sql .= " LIMIT {$start}, {$limit}";
+		
+		$query = $this->db->query($sql);
+		
+		$this->data['items'] = array();
+		
+		if ( $query->rows ) {
+		
+			foreach ( $query->rows as $row ) {
+			
+				$path_array = $this->model_post->parseCategory($row['path']);
+				
+				if ( $category->parent['id'] == $this->config->get('estate_parent_id') ) {
+				
+					$path = $this->model_post->doEstateTitle($path_array);
+				
+				} else if ( $category->parent['id'] == $this->config->get('vehicle_parent_id') ) {
+				
+					$path = $this->model_post->doVehicleTitle($path_array, ' / ');
+				
+				} else {
+				
+					$path = '';
+				
+				}
+				
+				$data = array(
+				
+					'name' 				=> $row['name'],
+					'image'				=> $this->model_image->resize($row['image'], 179, 118),
+					'price'				=> number_format($row['price']) . ' ' . $row['currency'],
+					'date_published'	=> date('d.m.Y', strtotime($row['date_published'])),
+					'path'				=> $path,
+					'city'				=> $row['city'],
+					'town'				=> $row['town'],
+					'quarter'			=> $row['quarter'],
+					'url'				=> $this->url->link('post', false, array('category' => $row['category'], 'post_slug' => $row['slug'], 'post_id' => $row['id'])),
+					'bold_title'		=> $row['bold_title'],
+					'show_up'			=> $row['show_up']
+				
+				);
+				
+				if ( $this->data['columns'] ) {
+				
+					foreach ( $this->data['columns'] as $column ) {
+					
+						$data["option_values"][] = $row["option_value_".(int)$column['option_id']];
+					
+					}
+				
+				}					
+			
+				$this->data['items'][] = $data;
+			
+			}
+			
+			$request_uri = $_SERVER['REQUEST_URI'];
+			
+			if ( preg_match('/page=[0-9]+$/', $request_uri) ) {
+			
+				$request_uri = preg_replace('/page=[0-9]+$/', 'page={page}', $request_uri);
+			
+			} else {
+			
+				$request_uri = $request_uri . (preg_match('/\?/', $request_uri) ? '&' : '?') . 'page={page}';
+			
+			}
+			
+			$pagination = new Pagination();
+			$pagination->total 			= $query_num_rows;
+			$pagination->page 			= $page;
+			$pagination->limit 			= $limit;
+			$pagination->text 			= "Toplam {pages} sayfa içinde {current_page}. sayfadasınız";
+			$pagination->text_next 		= "<img src='view/images/pagination_next.png' />";
+			$pagination->text_prev 		= "<img src='view/images/pagination_prev.png' />";
+			$pagination->text_first 	= false;
+			$pagination->text_last 		= false;
+			$pagination->url 			= $request_uri;
+			$this->data['pagination'] 	= $pagination->render();			
+		
+		}
+		
+		$this->data['rss_url'] = $this->url->link('category', false, array('slug' => $category->current['tag']), array('rss' => 'true'));
+
+		$this->template = 'post_search.html';
+		$this->children = array(
+			'header',
+			'menu',
+			'footer',
+		);		
+						
+		$this->response->set($this->render());		
+	}
+	
+	public function total_results ( $num_rows = 0 ) {
+	
+		$num_rows = (int)$num_rows;
+		
+		if ( $num_rows == 0 ) {
+		
+			$result = "uygun ilan bulunamadı.";
+		
+		} else if ( $num_rows > 0 && $num_rows < 1001 ) {
+		
+			$result = "{$num_rows} adet ilan bulundu.";
+		
+		} else if ( $num_rows > 1000 ) {
+		
+			$result = "1000'den fazla ilan bulundu.";
+		
+		}
+		
+		return $result;
+	
+	}
+	
+}
+?>

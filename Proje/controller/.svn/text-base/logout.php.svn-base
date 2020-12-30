@@ -1,0 +1,12 @@
+<?php  
+class ControllerLogout extends Controller {
+	public function index() {
+	
+		$this->customer->logout();	
+		
+		$this->redirect(HTTP_SERVER);
+	
+	}
+
+}
+?>

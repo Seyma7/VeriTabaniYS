@@ -1,0 +1,544 @@
+<?php  
+ 
+Class ControllerAjaxServices Extends Controller {
+	
+	
+	public function getCategories () {
+	
+		if ( !$this->protectExternalQuery() ) {
+		
+			return $this->die_connection();
+			
+		}
+		
+		$json = array('status' => 0, 'path' => '', 'data' => array());
+		
+		if ( (int)$this->request->post('parent_id') ) {
+		
+			$parent = $this->db->query("SELECT c.id, c.name, cm.path FROM category c LEFT JOIN category_mirror cm ON c.id = cm.id WHERE c.id = '".(int)$this->request->post('parent_id')."' AND c.status = '1'");
+		
+			if ( $parent->rows ) {
+			
+				$this->load->model('category');
+				
+				$json['status'] = 1;
+				$json['path'] 	= $parent->row['path'];
+				$json['data']	= $this->model_category->get_sub_categories((int)$this->request->post('parent_id'));
+				
+				if ( !$json['data'] ) {
+				
+					$json['status'] = 2;
+				
+				}
+			
+			}
+		
+		}
+	
+		$this->load->library('json');
+		
+		$this->response->set(Json::encode($json));	
+	
+	}	
+	
+	public function getTowns () {
+	
+		if ( !$this->protectExternalQuery() ) {
+		
+			return $this->die_connection();
+			
+		}
+		
+		$json = array('status' => 0, 'data' => array());
+		
+		$this->load->model('location');
+		
+		$towns = $this->model_location->getTowns((int)$this->request->post('city_id'));
+		
+		if ( $towns ) {
+		
+			$json['status'] = 1;
+			$json['data'] 	= $towns;
+		
+		}
+	
+		$this->load->library('json');
+		
+		$this->response->set(Json::encode($json));	
+	
+	}	
+	
+	public function getDistricts () {
+	
+		if ( !$this->protectExternalQuery() ) {
+		
+			return $this->die_connection();
+			
+		}
+		
+		$json = array('status' => 0, 'data' => array());
+		
+		$this->load->model('location');
+		
+		$towns = $this->model_location->getDistricts((int)$this->request->post('town_id'));
+		
+		if ( $towns ) {
+		
+			$json['status'] = 1;
+			$json['data'] 	= $towns;
+		
+		}
+	
+		$this->load->library('json');
+		
+		$this->response->set(Json::encode($json));	
+	
+	}
+	
+	public function getAddress () {
+	
+		if ( !$this->protectExternalQuery() ) {
+		
+			return $this->die_connection();
+			
+		}
+		
+		$json = array();
+		
+		$filter_name = urldecode($this->request->post('filter_name'));
+		
+		if ( strlen(str_replace(' ', '', $filter_name)) > 2 ) {
+		
+			$old_expire	 			= $this->cache->expire;
+			$this->cache->expire	= 3600 * 24 * 30;
+			
+			$json = $this->cache->get('search_address.' . (int)$this->request->post('city_id') . '.' . md5($filter_name));
+		
+			if ( !$json ) {
+		
+				$query = $this->db->query(
+					"SELECT t.id AS town_id, q.id AS quarter_id, c.name AS city, t.name AS town, d.name AS district, q.name AS quarter 
+					FROM quarter q 
+					LEFT JOIN district d ON q.district_id = d.id 
+					LEFT JOIN town t ON d.town_id = t.id 
+					LEFT JOIN city c ON t.city_id = c.id 
+					WHERE c.id = '".(int)$this->request->post('city_id')."'
+					AND 
+					(
+						LCASE(q.name) LIKE '" . $this->db->escape(mb_strtolower($filter_name, 'UTF-8')) . "%' OR
+						LCASE(d.name) LIKE '" . $this->db->escape(mb_strtolower($filter_name, 'UTF-8')) . "%' OR
+						LCASE(t.name) LIKE '" . $this->db->escape(mb_strtolower($filter_name, 'UTF-8')) . "%'
+					)"
+				);
+				
+				if ( $query->rows ) {
+				
+					foreach ( $query->rows as $row ) {
+					
+						$json[] = array(
+						
+							'town_id' 		=> $row['town_id'],
+							'quarter_id' 	=> $row['quarter_id'],
+							'name'			=> implode(', ', array($row['city'], $row['town'], $row['district'], $row['quarter']))
+						
+						);
+					
+					}
+					
+					$this->cache->set('search_address.' . (int)$this->request->post('city_id') . '.' . md5($filter_name), $json);
+					$this->cache->expire = $old_expire;
+				
+				}
+			
+			}
+		
+		}
+	
+		$this->load->library('json');
+		
+		$this->response->set(Json::encode($json));	
+	
+	}
+	
+	public function captcha () {
+	
+		if ( !$this->protectExternalQuery() ) {
+		
+			return $this->die_connection();
+			
+		}
+		
+		$this->load->library('captcha');
+		
+		$captcha = new Captcha;
+		
+		$this->session->set('captcha', $captcha->getCode());
+		
+		$captcha->showImage();		
+
+	}
+	
+	public function uploadPostImage () {
+	
+		if ( !$this->protectExternalQuery() ) {
+		
+			return $this->die_connection();
+			
+		}
+		
+		$json = array();
+		
+		$date = date('Y/m/d');
+		$path = 'upload/' . $date;
+		
+		if ( !upload_date_path_control ( $date ) ) {
+		
+			$json['error']	= "{$path} oluşturulamıyor. Lütfen sistem yöneticinize başvurun.";
+		
+		}
+		
+		if ( !isset($json['error']) ) {
+		
+			$this->load->model('upload');
+			$this->load->model('image');
+		
+			$image 		= (isset($_FILES['image']) && $_FILES['image']['tmp_name'] ? $_FILES['image'] : false);
+			
+			$filename	= md5(time().rand(0, 1000).uniqid());
+			
+			$allowed = array(
+				'image/jpeg',
+				'image/pjpeg',
+				'image/gif'
+			);			
+			
+			$result = $this->model_upload->upload($image, $filename, $path, 2097152, $allowed);
+			
+			if ( isset($result['error']) ) {
+			
+				$json['error'] = $result['error'];
+			
+			} else {
+			
+				$json['image'] 		= $result['file'];
+				$json['preview']	= $this->model_image->resize($result['file'], 78, 66);
+			
+			}
+		
+		}
+		
+		$this->load->library('json');
+		
+		exit(Json::encode($json));	
+
+	}	
+	
+	public function uploadMoveRequestImage () {
+	
+		if ( !$this->protectExternalQuery() ) {
+		
+			return $this->die_connection();
+			
+		}
+		
+		$json = array();
+		
+		$date = date('Y/m/d');
+		$path = 'upload/' . $date;
+		
+		if ( !upload_date_path_control ( $date ) ) {
+		
+			$json['error']	= "{$path} oluşturulamıyor. Lütfen sistem yöneticinize başvurun.";
+		
+		}
+		
+		if ( !isset($json['error']) ) {
+		
+			$this->load->model('upload');
+			$this->load->model('image');
+		
+			$image 		= (isset($_FILES['image']) && $_FILES['image']['tmp_name'] ? $_FILES['image'] : false);
+			
+			$filename	= 'mr_' . time() . md5(time().rand(0, 1000).uniqid());
+			
+			$allowed = array(
+				'image/jpeg',
+				'image/pjpeg',
+				'image/gif'
+			);			
+			
+			$result = $this->model_upload->upload($image, $filename, $path, 2097152, $allowed);
+			
+			if ( isset($result['error']) ) {
+			
+				$json['error'] = $result['error'];
+			
+			} else {
+			
+				$json['image'] 		= $result['file'];
+				$json['preview']	= $this->model_image->resize($result['file'], 78, 66);
+			
+			}
+		
+		}
+		
+		$this->load->library('json');
+		
+		exit(Json::encode($json));	
+
+	}	
+	
+	public function savePostImages () {
+	
+		if ( !$this->protectExternalQuery() ) {
+		
+			return $this->die_connection();
+			
+		}
+		
+		$json = array();
+		
+		if ( $this->request->isPOST() && $this->request->get('postId') && $this->customer->isLogged() ) {
+		
+			$query = $this->db->query("SELECT id FROM post WHERE id = '".(int)$this->request->get('postId')."' AND customer_id = '".(int)$this->customer->get('id')."' AND status = '-1'");
+		
+			if ( $query->rows ) {
+			
+				$this->load->model('post');
+				
+				$this->model_post->clearPostImages($this->request->get('postId'));
+				
+				if ( $this->request->post('image') ) {
+			
+					foreach ( $this->request->post('image') as $key => $value ) {
+					
+						$preview = ($this->request->post('image_selected') == $value ? 1 : 2);
+						
+						$this->model_post->addPostImage($this->request->get('postId'), $value, $preview, $key);
+					
+					}
+				
+				}
+				
+				$json['success'] = 'İlan fotoları yüklendi.'; 	
+			
+			} else {
+			
+				$json['error'] = 'İlan durumu şuanki yükleme için uygun değil.';
+			
+			}
+		
+		} else {
+		
+			$json['error'] = 'Hatalı parametre.';
+		
+		}
+		
+		$this->load->library('json');
+		
+		exit(Json::encode($json));			
+
+	}
+	
+	public function getMapPost () {
+
+		if ( !$this->protectExternalQuery() ) {
+		
+			return $this->die_connection();
+			
+		}
+
+		$json = array();
+		
+		$this->load->model('post');
+		
+		$json = $this->model_post->getMapPost();
+		
+		$this->load->library('json');
+		
+		exit(Json::encode($json));			
+	
+	}
+	
+	private function protectExternalQuery () {
+	
+		$error = false;
+	
+		if ( !isset($_SERVER['HTTP_REFERER']) ) {
+		
+			$error = true;
+		
+		} else {
+		
+		
+		}
+
+		return (!$error ? true : false); 
+	
+	}
+	
+	private function die_connection () {
+	
+		$this->load->library('json');
+		
+		exit(Json::encode(array('error' => 'Unexpected method!')));		
+	
+	}
+	
+	public function get_geo_location() {
+	
+		return $this->forward('error');
+	
+		set_time_limit(0);
+	
+		$city_url 		= 'http://www.sahibinden.com/ajax/location/getCities?countryId=1';
+		$town_url 		= 'http://www.sahibinden.com/ajax/location/getTowns?cityId=%s';
+		$district_url 	= 'http://www.sahibinden.com/ajax/location/getDistricts?townId=%s';
+		
+		$city_content = $this->curl_grab_page($city_url);
+		
+		if ( $city_content ) {
+
+			$cities = json_decode($city_content);
+			
+			if ( $cities ) {
+			
+				foreach ( $cities as $city ) {
+				
+					$is_city = $this->db->query("SELECT id FROM city WHERE id = '".$city->id."'");
+					
+					if ( !$is_city->rows ) {
+					
+						if ( isset($city->detail->location_id) ) {
+					
+							//$this->db->query("INSERT INTO location SET id = '".$city->detail->location_id."', lat = '".$city->detail->lat."', lon = '".$city->detail->lon."', zoom = '".$city->detail->zoom."'");
+					
+							$this->db->query("INSERT INTO city SET id = '".$city->id."', country_id = '1', location_id = '".$city->detail->location_id."', name = '".$city->name."', sort_order = '".$city->sortOrder."'"); 
+					
+						} else {
+									
+							$this->db->query("INSERT INTO city SET id = '".$city->id."', country_id = '1', location_id = '0', name = '".$city->name."', sort_order = '".$city->sortOrder."'"); 
+									
+						}
+
+					}
+					
+					continue; // sehirlerin locationlari unutuldugu icin, 29. satir
+					
+					$town_content = $this->curl_grab_page(vsprintf($town_url, $city->id));
+					
+					if ( $town_content ) {
+					
+						$towns = json_decode($town_content);
+						
+						if ( $towns ) {
+						
+							foreach ( $towns as $town ) {
+							
+								$is_town = $this->db->query("SELECT id FROM town WHERE id = '".$town->id."'");
+								
+								if ( !$is_town->rows ) {
+								
+									if ( isset($town->detail->location_id) ) {
+								
+										$this->db->query("INSERT INTO location SET id = '".$town->detail->location_id."', lat = '".$town->detail->lat."', lon = '".$town->detail->lon."', zoom = '".$town->detail->zoom."'");
+								
+										$this->db->query("INSERT INTO town SET id = '".$town->id."', city_id = '".$city->id."', location_id = '".$town->detail->location_id."', name = '".$town->name."', sort_order = '".$town->sortOrder."'"); 
+								
+									} else {
+									
+										$this->db->query("INSERT INTO town SET id = '".$town->id."', city_id = '".$city->id."', location_id = '0', name = '".$town->name."', sort_order = '".$town->sortOrder."'"); 
+									
+									}
+								
+								}
+
+								$district_content = $this->curl_grab_page(vsprintf($district_url, $town->id));
+								
+								if ( $district_content ) {
+								
+									$districts = json_decode($district_content);
+									
+									if ( $districts ) {
+									
+										foreach ( $districts as $district ) {
+										
+											$is_district = $this->db->query("SELECT id FROM district WHERE id = '".$district->id."'");
+											
+											if ( !$is_district->rows ) {
+											
+												$this->db->query("INSERT INTO district SET id = '".$district->id."', town_id = '".$town->id."', name = '".$district->name."', sort_order = '".$district->sortOrder."'"); 
+											
+											}
+											
+											if ( $district->quarters ) {
+											
+												foreach ( $district->quarters as $quarter ) {
+												
+													$is_quarter = $this->db->query("SELECT id FROM quarter WHERE id = '".$quarter->id."'");
+													
+													if ( !$is_quarter->rows ) {
+													
+														if ( isset($quarter->detail->location_id) ) {
+													
+															$this->db->query("INSERT INTO location SET id = '".$quarter->detail->location_id."', lat = '".$quarter->detail->lat."', lon = '".$quarter->detail->lon."', zoom = '".$quarter->detail->zoom."'");
+													
+															$this->db->query("INSERT INTO quarter SET id = '".$quarter->id."', district_id = '".$district->id."', location_id = '".$quarter->detail->location_id."', name = '".$quarter->name."', sort_order = '".$quarter->sortOrder."'"); 
+													
+														} else {
+														
+															$this->db->query("INSERT INTO quarter SET id = '".$quarter->id."', district_id = '".$district->id."', location_id = '0', name = '".$quarter->name."', sort_order = '".$quarter->sortOrder."'"); 
+														
+														}														
+													
+													}
+												
+												}
+											
+											}
+										
+										}
+									
+									}
+								
+								}
+							
+							}
+						
+						}
+					
+					}
+
+				}
+			
+			}
+
+		}
+		
+	}
+	
+	private function curl_grab_page($url){
+	
+		$ch = curl_init();
+
+		curl_setopt($ch, CURLOPT_USERAGENT, "Mozilla/4.0 (compatible; MSIE 5.01; Windows NT 5.0)");
+		curl_setopt($ch, CURLOPT_TIMEOUT, 40);
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
+
+		curl_setopt($ch, CURLOPT_URL, $url);
+
+		curl_setopt($ch, CURLOPT_HEADER, FALSE);
+		curl_setopt($ch, CURLOPT_USERAGENT, $_SERVER['HTTP_USER_AGENT']);
+		curl_setopt($ch, CURLOPT_FOLLOWLOCATION, TRUE);
+
+		ob_start();
+		return curl_exec ($ch); // execute the curl command
+		ob_end_clean();
+		curl_close ($ch);
+		unset($ch);
+		
+	}
+
+}
+
+?>

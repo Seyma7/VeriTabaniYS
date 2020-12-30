@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head> 
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">  
+    <link href="css/bootstrapTheme.css" rel="stylesheet">
+    <link href="css/custom.css" rel="stylesheet">
+    <!-- Owl Carousel Assets -->
+    <link href="owl.carousel.css" rel="stylesheet">
+    <link href="owl.theme.css" rel="stylesheet">  
+    <script src="js/jquery-1.9.1.min.js"></script> 
+    <script src="owl.carousel.js"></script>
+    
+    <script src="js/bootstrap-collapse.js"></script>
+    <script src="js/bootstrap-transition.js"></script>
+    <script src="js/bootstrap-tab.js"></script>
+
+    <script src="js/google-code-prettify/prettify.js"></script>
+    <script src="js/application.js"></script>
+
+  </head>
+  <body>  
+    <div id="sync1" class="owl-carousel">
+      <div class="item"><h1>1</h1></div>
+      <div class="item"><h1>2</h1></div>
+      <div class="item"><h1>3</h1></div>
+      <div class="item"><h1>4</h1></div>
+      <div class="item"><h1>5</h1></div>
+      <div class="item"><h1>6</h1></div>
+      <div class="item"><h1>7</h1></div>
+      <div class="item"><h1>8</h1></div>
+      <div class="item"><h1>9</h1></div>
+      <div class="item"><h1>10</h1></div>
+      <div class="item"><h1>11</h1></div>
+      <div class="item"><h1>12</h1></div>
+    </div>
+
+    <div id="sync2" class="owl-carousel">
+      <div class="item" ><h1>1</h1></div>
+      <div class="item" ><h1>2</h1></div>
+      <div class="item" ><h1>3</h1></div>
+      <div class="item" ><h1>4</h1></div>
+      <div class="item" ><h1>5</h1></div>
+      <div class="item" ><h1>6</h1></div>
+      <div class="item" ><h1>7</h1></div>
+      <div class="item" ><h1>8</h1></div>
+      <div class="item" ><h1>9</h1></div>
+      <div class="item"><h1>10</h1></div>
+      <div class="item"><h1>11</h1></div>
+      <div class="item"><h1>12</h1></div>
+    </div>   
+    
+    <script>
+    $(document).ready(function() {
+
+      var sync1 = $("#sync1");
+      var sync2 = $("#sync2");
+
+      sync1.owlCarousel({
+        singleItem : true,
+        slideSpeed : 1000,
+        navigation: false,
+        pagination:false,
+        afterAction : syncPosition,
+        responsiveRefreshRate : 200,
+      });
+
+      sync2.owlCarousel({
+        items : 15,
+        itemsDesktop      : [1199,10],
+        itemsDesktopSmall : [979,10],
+        itemsTablet       : [768,8],
+        itemsMobile       : [479,4],
+        pagination:false,
+        responsiveRefreshRate : 100,
+        afterInit : function(el){ 
+          el.find(".owl-item").eq(0).addClass("synced");
+        }
+      });
+
+      function syncPosition(el){ 
+        var current = this.currentItem;
+        $("#sync2")
+          .find(".owl-item")
+          .removeClass("synced")
+          .eq(current)
+          .addClass("synced")
+        if($("#sync2").data("owlCarousel") !== undefined){
+          center(current)
+        } 
+      }
+
+      $("#sync2").on("click", ".owl-item", function(e){
+        e.preventDefault();
+        var number = $(this).data("owlItem");
+        sync1.trigger("owl.goTo",number);
+      });
+
+      function center(number){
+        var sync2visible = sync2.data("owlCarousel").owl.visibleItems;
+
+        var num = number;
+        var found = false;
+        for(var i in sync2visible){
+          if(num === sync2visible[i]){
+            var found = true;
+          }
+        }
+
+        if(found===false){
+          if(num>sync2visible[sync2visible.length-1]){
+            sync2.trigger("owl.goTo", num - sync2visible.length+2)
+          }else{
+            if(num - 1 === -1){
+              num = 0;
+            }
+            sync2.trigger("owl.goTo", num);
+          }
+        } else if(num === sync2visible[sync2visible.length-1]){
+          sync2.trigger("owl.goTo", sync2visible[1])
+        } else if(num === sync2visible[0]){
+          sync2.trigger("owl.goTo", num-1)
+        }
+      }
+
+    });
+    </script>
+
+  </body>
+</html>

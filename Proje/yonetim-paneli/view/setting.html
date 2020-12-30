@@ -1,0 +1,34 @@
+{$header}
+<script type="text/javascript" src="view/js/FusionCharts.js"></script>
+<div class="box_head"></div>
+<div class="box_body">
+	<div class="heading_title">{$title}</div>
+	<div class="heading_desc">Sistemle ilgili ayarları bu alandan yapabilirsiniz. <b><i>NOT: Yanlış girilen parametreler sistemde hatalara yol açabilir.</i></b></div>
+	<div class="buttons marg10">
+		<a onClick="$('form#save').submit();" class="button">Kaydet</a> 
+	</div>	
+	<form action="{$action}" method="post" autocomplete="off" id="save">
+		<div id="tabs" class="htabs">
+			<a href="#tab_1">Ön Tanımlı Ayarlar</a>
+		</div>	
+		<div id="tab_1">
+			<table class="list">
+				<tr class="head">
+					<td width="5">&nbsp;</td>
+					<td colspan="2">Ayarlar</td>
+				</tr>
+				{if $settings}{foreach from = $settings item = i}
+				<tr class="gridrow">
+					<td></td>
+					<td class="field1"><span class="required">*</span> {$i.desc}:</td>
+					<td><input type="text" name="{$i.name}" value="{$i.value}" class="input1" /></td>
+				</tr>{/foreach}{/if}			
+			</table>				
+		</div>		
+		<div class="clear"></div>
+	</form>	
+</div>
+<script type="text/javascript">
+	$('#tabs a').tabs();
+</script>
+{$footer}

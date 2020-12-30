@@ -1,0 +1,48 @@
+<div class="container-fluid" id="menu">
+	<div class="container">
+		<div class="row">
+	    	<div class="box col-md-10 col-md-offset-1 noPadding">
+					<div class="col-md-12 noPadding">
+						<div id="mobileNav" class="col-xs-12 hidden-md hidden-lg noPadding">
+									<i class="fa bar leftBar fa-bars" data-type="menu" aria-hidden="true"></i>
+									<div class="logo"><a href="./" title="Latest News" alt="Latest News"><img  src="view/images/haber.png"/></a></div>
+									<i class="fa bar rightBar fa-search" data-type="search" aria-hidden="true"></i>
+						</div>
+						<ul class="mobileMenu menu nav nav-pills">
+							{if $menu_category}
+							{foreach from = $menu_category item = i}
+							<li class="{if isset($i.special_menu) && $i.special_menu}special {/if}{if $i.active || $i.slug == $menu_slug}active{/if}"><a href="{$i.url}">{$i.name}</a></li>
+							{/foreach}
+							{/if}
+							<li class="searchForm pull-right hidden-xs hidden-sm">
+								<form action="{$search_url}" method="post">
+									<input type="text" name="search" class="searchInput"/>
+									<i class="fa searchButton fa-search" aria-hidden="true"></i>
+								</form>
+							</li>
+					 	</ul>
+						<ul class="mobileMenu search nav nav-pills  hidden-md hidden-lg"></ul>
+					</div>
+				</div>
+		</div>
+	</div>
+</div>
+<script type="text/javascript">
+	$('#mobileNav .bar').click(function(){
+			var item  = $(this).attr('data-type');
+			$('ul.mobileMenu.show').not("." + item).removeClass('show');
+			$('ul.mobileMenu.' + item ).toggleClass('show');
+	});
+
+</script>
+<script type="text/javascript">
+	var menuP = $( "#menu" ).position().top;
+	$( window ).on( "ready scroll resize", function() {
+			var wWidth = $( window ).width();
+	    var scroll = $(window).scrollTop();
+	    if( scroll > menuP && wWidth > 992 )
+	      $("#menu").addClass("sticky");
+	    else
+	      $("#menu").removeClass("sticky");
+	});
+</script>

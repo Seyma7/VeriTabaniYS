@@ -1,0 +1,54 @@
+{$header}
+<div id="login">
+    <div style="width: 100%;height: 94px;background: url(view/image/logo.png) no-repeat center; margin-bottom:10px;"></div>
+    {if isset($error)}
+    <div id="login_error" style="margin-bottom: 0px;"><b>Hata:</b> {$error}</div>
+    {/if}
+    <form action="{$action}" method="post" autocomplete="off" id="loginForm" style="margin-top: 10px;"><p><label>Kullanıcı
+        adı<br/> <input type="text" name="username" id="user_login" class="input" value="" size="20"
+                        tabindex="10"/></label></p>
+        <p><label>Parola<br/> <input type="password" name="password" id="user_pass" class="input" value="" size="20"
+                                     tabindex="20"/></label></p>{* <p><label>Doğrulama Kodu<br/> <img id="captchaIMG"
+                                                                                                      src=""><i
+                class="renewCaptcha fa fa-refresh" aria-hidden="true"></i> <br> <input type="text" name="captcha"
+                                                                                       id="captcha" class="input"
+                                                                                       value="" size="20"
+                                                                                       tabindex="20"/></label></p>*} {*
+        <p class="forgetmenot"><label><input name="rememberme" type="checkbox" id="rememberme" value="forever"
+                                             tabindex="90"/> Beni Hatırla</label></p>*} <p class="submit"> {if
+            isset($redirect)}<input type="hidden" name="redirect" value="view/ekle.php"/>{/if} <a
+                    onClick="$('form#loginForm').submit()" class="button">Giriş</a></p></form>
+    <script type="text/javascript">    var captcha_url = "{$captcha_url}";
+
+    function renew_captcha() {
+        $('img[id="captchaIMG"]').attr('src', captcha_url);
+    }
+
+    $('.renewCaptcha').click(function () {
+        renew_captcha();
+    })
+    renew_captcha();
+
+    function pisilab_form_focus() {
+        setTimeout(function () {
+            try {
+                d = document.getElementById('user_login');
+                d.focus();
+                d.select();
+            } catch (e) {
+            }
+        }, 200);
+    }
+
+    pisilab_form_focus();
+    $('input[name="username"]').keydown(function (e) {
+        if (e.keyCode == 13) {
+            $('input[name="password"]').focus();
+        }
+    });
+    $('input[name="password"]').keydown(function (e) {
+        if (e.keyCode == 13) {
+            $('#loginForm').submit();
+        }
+    });    </script>
+    <p id="pisitext">{$smarty.const.SYSTEM_NAME}</p></div>{$footer}

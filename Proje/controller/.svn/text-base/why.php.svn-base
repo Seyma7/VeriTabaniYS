@@ -1,0 +1,27 @@
+<?php  
+Class ControllerWhy Extends Controller {
+
+	public function index() {
+	
+		$this->document->setTitle('Neden Anahtarım?');
+		
+		
+		$this->data['estate_url'] 		= $this->url->link('store', 'estate');
+		$this->data['gallery_url'] 		= $this->url->link('store', 'gallery');
+		$this->data['building_url'] 	= $this->url->link('store', 'building');
+		$this->data['transport_url'] 	= $this->url->link('store', 'transport');
+		
+
+		$this->template = 'why.html';
+		
+		$this->children = array(
+			'header',
+			'menu',
+			'footer',
+		);		
+						
+		$this->response->set($this->render());		
+	}
+
+}
+?>

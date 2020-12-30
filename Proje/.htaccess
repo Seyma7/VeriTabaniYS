@@ -1,0 +1,9 @@
+#Options +FollowSymlinks
+<IfModule mod_rewrite.c>
+RewriteEngine On 
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^download/(.*)/(.*)/(.*)/(.*).zip$ index.php?controller=download&file=$4 [NC]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^http://localhost:8081/proje/(.*) index.php [L]
+</IfModule>

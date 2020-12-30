@@ -1,0 +1,815 @@
+<?php
+
+Class ModelPost extends Controller{
+
+	public function getPost ( $post_id ) {
+	
+		if ( !(int)$post_id ) return false;
+		
+		//$query = $this->db->query("SELECT p.*, cm.path FROM post p LEFT JOIN category_mirror cm ON p.category_id = cm.id LEFT JOIN post_category pc ON p.id = pc.post_id WHERE p.id = '".(int)$this->request->get('postId')."' AND p.customer_id = '".$this->customer->get('id')."' AND pc.category_id = '".$category->current['id']."' GROUP BY p.id");
+		$query = $this->db->query("SELECT p.*, cm.path AS category_path FROM post p LEFT JOIN category_mirror cm ON p.category_id = cm.id WHERE p.id = '".(int)$post_id."'");
+		
+		if ( $query->rows ) {
+		
+			return $query->row;
+		
+		}
+		
+		return false;
+	
+	}
+	
+	public function notFinishedPost ( $customer_id = 0, $category_id = 0 ) {
+	
+		if ( !(int)$customer_id || !(int)$category_id ) return false;
+
+		$query = $this->db->query("SELECT p.id FROM post p LEFT JOIN post_category pc ON p.id = pc.post_id WHERE pc.category_id = '".(int)$category_id."' AND p.status = '-1' AND p.customer_id = '".(int)$customer_id."' AND p.date_added >= '".date('Y-m-d H:i:s', strtotime(date('Y-m-d H:i:s') . "- " . (int)$this->config->get("free_post_expire_time") . " hours"))."' GROUP BY p.id ORDER BY p.id DESC");
+		
+		if ( $query->rows ) {
+		
+			return $query->row['id'];
+		
+		}
+		
+		return false;	
+	
+	}
+	
+	public function clearPostOptions ( $post_id ) {
+	
+		$this->db->query("DELETE FROM post_option WHERE post_id = '".(int)$post_id."'");
+	
+	}		
+	
+	public function setPostOptions ( $options = array(), $post_id = false ) {
+	
+		if ( !$options || !$post_id ) return false;
+		
+		foreach ( $options as $key => $value ) {
+		
+			$this->db->query("INSERT INTO post_option SET option_id = '".(int)$key."', post_id = '".(int)$post_id."', value = '".$this->db->escape($value)."'");
+		
+		}
+	
+	}	
+	
+	public function clearPostLocation ( $post_id ) {
+	
+		$this->db->query("DELETE FROM post_location WHERE post_id = '".(int)$post_id."'");
+	
+	}
+
+	public function setPostLocation ( $post_id = false, $city_id, $town_id, $quarter_id, $lat, $lon ) {
+	
+		if ( !$post_id ) return false;
+
+		$this->db->query("INSERT INTO post_location SET post_id = '".(int)$post_id."', city_id = '".(int)$city_id."', town_id = '".(int)$town_id."', quarter_id = '".(int)$quarter_id."', lat = '".$this->db->escape($lat)."', lon = '".$this->db->escape($lon)."'");
+	
+	}	
+	
+	public function clearPostAttributes ( $post_id ) {
+	
+		$this->db->query("DELETE FROM post_attribute WHERE post_id = '".(int)$post_id."'");
+	
+	}		
+	
+	public function setPostAttributes ( $attributes = array(), $post_id = false ) {
+	
+		if ( !$attributes || !$post_id ) return false;
+		
+		foreach ( $attributes as $attribute_id => $values ) {
+		
+			foreach ( $values as $value ) {
+		
+				$this->db->query("INSERT INTO post_attribute SET attribute_id = '".(int)$attribute_id."', post_id = '".(int)$post_id."', value_id = '".(int)$value."'");
+		
+			}
+		
+		}
+	
+	}	
+	
+	public function clearPostPreserves ( $post_id ) {
+	
+		$this->db->query("DELETE FROM post_preserve WHERE post_id = '".(int)$post_id."' AND status = '0'");
+	
+	}		
+	
+	public function getPostPreserves ( $post_id = false, $pre_saved = false, $status = false ) {
+	
+		if ( !$post_id ) return false;
+		
+		$data = array();
+		
+		if ( $pre_saved ) {
+		
+			$query = $this->db->query("SELECT * FROM post_preserve WHERE post_id = '".(int)$post_id."' AND status = '0'");
+			
+			if ( $query->rows ) {
+			
+				foreach ( $query->rows as $row ) {
+				
+					array_push($data, $row['preserve_id']);
+				
+				}
+			
+			}			
+		
+		} else {
+		
+			$query = $this->db->query("SELECT * FROM post_preserve WHERE post_id = '".(int)$post_id."'" . ((int)$status ? " AND status = '".(int)$status."'" : false));
+		
+			if ( $query->rows ) {
+			
+				foreach ( $query->rows as $row ) {
+				
+					$data[] = array(
+					
+						
+					
+					);
+				
+				}
+			
+			}
+		
+		}
+		
+		return $data;
+	
+	}	
+	
+	public function addPostPreserve ( $preserves = array(), $post_id = false ) {
+	
+		if ( !$preserves || !$post_id ) return false;
+		
+		foreach ( $preserves as $preserve ) {
+		
+			if ( (int)$preserve ) {
+			
+				$this->db->query("INSERT INTO post_preserve SET post_id = '".(int)$post_id."', preserve_id = '".(int)$preserve."'");				
+			
+			}
+		
+		}
+	
+	}	
+
+	public function getPostPreserveCart (  $post_id = false ){
+	
+		if ( !$post_id ) return false;
+		
+		$data = array();
+		
+		$query = $this->db->query("SELECT p.name, p.period, p.price FROM post_preserve pp LEFT JOIN preserve p ON pp.preserve_id = p.id WHERE pp.post_id = '".(int)$post_id."' AND pp.status = '0' ORDER BY p.sort_order ASC");
+		
+		if ( $query->rows ) {
+		
+			$data['items'] = array();
+			$data['total'] = 0;
+		
+			foreach ( $query->rows as $row ) {
+			
+				$data['items'][] = array(
+				
+					'name' 			=> $row['name'],
+					'description' 	=> ($row['period'] == 0 ? 'İlanınızın yayın süresi boyunca - ' : $row['period'] . ' Hafta - ') . ($row['price'] == 0 ? 'Ücretsiz' : $row['price'] . ' TL'),
+					'price'			=> ($row['price'] == 0 ? 'Ücretsiz' : $row['price'] . ' TL'),
+				
+				);
+				
+				if ( $row['price'] != 0 ) {
+				
+					$data['total'] += $row['price'];
+				
+				}
+			
+			}
+			
+			$data['total'] = number_format($data['total'], 2);
+		
+		}
+		
+		return $data;
+
+	}
+	
+	public function doActivePost (  $post_id = false ){
+	
+		if ( !(int)$post_id ) return false;
+
+		$this->db->query("UPDATE post SET status = '1' WHERE id = '".(int)$post_id."'");
+
+	}	
+	
+	public function doActivePostPreserve (  $post_id = false, $date = false ){
+	
+		if ( !(int)$post_id ) return false;
+		
+		if ( !$date ) $date = date('Y-m-d H:i:s');
+
+		$query = $this->db->query("SELECT pp.id, p.period FROM post_preserve pp LEFT JOIN preserve p ON pp.preserve_id = p.id WHERE pp.post_id = '".(int)$post_id."' AND pp.status = '0'");
+		
+		if ( $query->rows ) {
+		
+			foreach ( $query->rows as $row ) {
+			
+				$this->db->query("UPDATE post_preserve SET status = '1', date_expired = '".($row['period'] == 0 ? 0 : date('Y-m-d H:i:s', strtotime($date . "+ {$row['period']} weeks")))."' WHERE id = '".$row['id']."'");
+			
+			}
+		
+		}
+
+	}
+	
+	public function getPreserve ( $category_id, $code = 'home_premium', $limit = 2) {
+	
+		if ( !(int)$category_id ) return false;
+		
+		$data = $this->cache->get('post_preserve.' . $code . '.' . (int)$category_id);
+	
+		if ( !$data ) {
+	
+			$query = $this->db->query("SELECT p.id, p.name, p.slug AS post_slug, c.slug AS category_slug, p.price, p.currency, cm.path, city.name AS city, town.name AS town FROM post_preserve pp LEFT JOIN preserve pre ON pp.preserve_id = pre.id LEFT JOIN post p ON pp.post_id = p.id LEFT JOIN category c ON p.category_id = c.id LEFT JOIN post_category pc ON p.id = pc.post_id LEFT JOIN category_mirror cm ON p.category_id = cm.id LEFT JOIN post_location pl ON p.id = pl.post_id LEFT JOIN city city ON city.id = pl.city_id LEFT JOIN town town ON town.id = pl.town_id WHERE p.status = '1' AND pp.status = '1' AND pre.type = 'post' AND pp.date_expired >= NOW() AND pre.code = '".$this->db->escape($code)."' AND pc.category_id = '".(int)$category_id."' GROUP BY p.id");
+			
+			if ( $query->rows ) {
+			
+				$this->load->model('category');
+				
+				if ( $code == 'home_premium' || $code == 'category_premium' ) {
+				
+					$image_w = 230;
+					$image_h = 173;
+				
+				} else if ( $code == 'home' || $code == 'category' ) {
+				
+					$image_w = 120;
+					$image_h = 90;					
+				
+				} else {
+
+					$image_w = 100;
+					$image_h = 100;					
+				
+				}
+			
+				foreach ( $query->rows as $row ) {
+				
+					$category_detail = $this->model_category->get_category_details($row['category_slug']);
+					
+					if ( $category_detail->parent['id'] == $this->config->get('estate_parent_id') ) {
+
+						$title = $this->doEstateTitle($this->parseCategory($row['path']));
+						
+						$location = $row['city'] . ' ' . $row['town'];
+					
+					} else if ( $category_detail->parent['id'] == $this->config->get('vehicle_parent_id') ) {
+
+						$title = $this->doVehicleTitle($this->parseCategory($row['path']), ' ', true);
+						
+						$model = $this->getPostOptionValue($row['id'], $this->config->get('post_year_option_id'));
+
+						$location = (isset($model['value']) && $model['value'] ? $model['value'] . ' model, ' : false) . $row['city'];
+
+					}									
+				
+					$data[] = array(
+					
+						'name' 		=> $row['name'],
+						'title'		=> $title,
+						'title_rip'	=> ( $code == 'home' || $code == 'category' ? ( mb_strlen($title) > 19 ? mb_substr($title, 0, 17, 'UTF-8') . '..' : $title ) : $title ),
+						'location'	=> $location,
+						'price'		=> number_format($row['price'], 0, '.', '.') . ' ' . $row['currency'],
+						'image'		=> $this->getPreviewImage($row['id'], $image_w, $image_h),
+						'url'		=> $this->url->link('post', false, array('category' => $row['category_slug'], 'post_slug' => $row['post_slug'], 'post_id' => $row['id']))
+					
+					);
+				
+				}
+
+				$this->cache->set('post_preserve.' . $code . '.' . (int)$category_id, $data);
+			
+			}
+		
+		}
+		
+		if ( $data ) {
+		
+			shuffle($data);
+			
+			if ( count($data) > (int)$limit ) {
+			
+				$data_new = array();
+				
+				for ( $i = 1; $i <= (int)$limit; $i++ ) {
+				
+					array_push($data_new, $data[$i - 1]);
+				
+				}
+				
+				$data = $data_new;
+			
+			}
+		
+		}
+	
+		return $data;
+	
+	}
+	
+	public function getPostOptionValue ( $post_id = false, $option_id = 0 ) {
+	
+		if ( !(int)$post_id || !(int)$option_id ) return false;
+		
+		$data = array();
+		
+		$query = $this->db->query("SELECT * FROM post_option WHERE post_id = '".(int)$post_id."' AND option_id = '".(int)$option_id."'");
+		
+		if ( $query->rows ) {
+		
+			$data = $query->row;
+		
+		}
+
+		return $data;
+	
+	}
+	
+	public function getLatestVehicles ( $limit = 5 ) {
+	
+		$data = $this->cache->get('latest_vehicle.' . (int)$limit);
+		
+		if ( !$data ) {
+	
+			$sql = "
+				SELECT 
+					p.id, 
+					p.slug,
+					p.price, 
+					p.currency, 
+					c.slug AS category, 
+					cm.path,
+					(SELECT value FROM post_option WHERE post_id = p.id AND option_id = '".$this->config->get('post_km_option_id')."') AS km, 
+					(SELECT value FROM post_option WHERE post_id = p.id AND option_id = '".$this->config->get('post_year_option_id')."') AS year 
+				FROM 
+					post p 
+						LEFT JOIN post_category pc ON p.id = pc.post_id 
+						LEFT JOIN category c ON p.category_id = c.id
+						LEFT JOIN category_mirror cm ON p.category_id = cm.id
+				WHERE 
+					p.status = '1' AND 
+					pc.category_id = '".(int)$this->config->get('vehicle_parent_id')."' 
+				ORDER BY date_published DESC LIMIT " . (int)$limit . "
+			";
+		
+			$query = $this->db->query($sql);
+			
+			if ( $query->rows ) {
+			
+				foreach ( $query->rows as $row ) {
+				
+					$data[] = array(
+						
+						'name'	=> $this->doVehicleTitle($this->parseCategory($row['path']), ' ') . ($row['km'] ? ', ' . $row['km'] . ' km' : false) . ($row['year'] ? ', ' . $row['year'] . ' model' : false),
+						'price'	=> number_format($row['price'], 0, '.', '.') . ' ' . $row['currency'],
+						'url'	=> $this->url->link('post', false, array('category' => $row['category'], 'post_slug' => $row['slug'], 'post_id' => $row['id']))
+				
+					);
+					
+				}
+
+				$this->cache->set('latest_vehicle.' . (int)$limit, $data);
+			
+			}
+		
+		}
+	
+		return $data;
+	
+	}
+	
+	public function getLatestEstates ( ) {
+	
+		$data = $this->cache->get('latest_estate');
+		
+		if ( !$data ) {
+	
+			$sql = "
+				SELECT 
+					p.id, 
+					p.slug,
+					p.price, 
+					p.currency, 
+					c.slug AS category, 
+					cm.path,
+					pc.category_id,
+					(SELECT value FROM post_option WHERE post_id = p.id AND option_id = '".$this->config->get('post_m2_option_id')."') AS m2,
+					city.name AS city, 
+					town.name AS town					
+				FROM 
+					post p 
+						LEFT JOIN post_category pc ON p.id = pc.post_id 
+						LEFT JOIN category c ON p.category_id = c.id
+						LEFT JOIN category_mirror cm ON p.category_id = cm.id
+						LEFT JOIN post_location pl ON p.id = pl.post_id
+						LEFT JOIN city city ON city.id = pl.city_id 
+						LEFT JOIN town town ON town.id = pl.town_id
+				WHERE 
+					p.status 		= '1' AND 
+					(pc.category_id = '".(int)$this->config->get('post_sale_category_id')."' OR pc.category_id 	= '".(int)$this->config->get('post_rent_category_id')."') 
+				ORDER BY date_published DESC
+			";
+		
+			$query = $this->db->query($sql);
+			
+			if ( $query->rows ) {
+			
+				foreach ( $query->rows as $row ) {
+				
+					$post_category = ($row['category_id'] == (int)$this->config->get('post_sale_category_id') ? 'sale' : 'rent');
+				
+					$item = array(
+						
+						'name'	=> $this->doEstateTitle($this->parseCategory($row['path'])) . ($row['city'] && $row['town'] ? ' - ' . $row['city'] . ' ' . $row['town'] : false) . ($row['m2'] ? ' - ' . $row['m2'] . 'm2' : false),
+						'price'	=> number_format($row['price'], 0, '.', '.') . ' ' . $row['currency'],
+						'url'	=> $this->url->link('post', false, array('category' => $row['category'], 'post_slug' => $row['slug'], 'post_id' => $row['id']))
+				
+					);
+					
+					if ( !isset($data[$post_category]) ) {
+
+						$data[$post_category] = array();
+					
+					}
+					
+					if ( count($data[$post_category]) <= 8 ) {
+					
+						$data[$post_category][] = $item;
+					
+					}
+					
+				}
+				
+				$this->cache->setExpire(3600 * 3);
+				
+				$this->cache->set('latest_estate', $data);
+			
+			}
+		
+		}
+	
+		return $data;
+	
+	}
+	
+	public function getPreviewImage ( $post_id = false, $width = 0, $height = 0 ) {
+	
+		$images = $this->getPostImages($post_id);
+		
+		if ( $images ) {
+		
+			$image = $images[0]['image'];
+		
+		} else {
+		
+			$image = false;
+		
+		}
+		
+		$this->load->model('image');
+		
+		return $this->model_image->resize($image, (int)$width, (int)$height);
+	
+	
+	}
+	
+	public function getPostImages ( $post_id = false ) {
+
+		$query = $this->db->query("SELECT * FROM post_image WHERE post_id = '".(int)$post_id."' ORDER BY preview, sort_order ASC");
+		
+		$data = array();
+		
+		if ( $query->rows ) {
+
+			$data = $query->rows;
+
+		}
+		
+		return $data;
+	
+	}
+	
+	public function getPostMapMarkerTypes ( $category_id = false ) {
+	
+		if ( !(int)$category_id ) return false;
+		
+		$data = array();
+		
+		if ( $category_id == $this->config->get('estate_parent_id') ) {
+		
+			$data[] = array('name' => 'Satılık', 'image' 	=> HTTP_IMAGE . 'markers/m1.png');
+			$data[] = array('name' => 'Kiralık', 'image' 	=> HTTP_IMAGE . 'markers/m2.png');
+			$data[] = array('name' => 'Devren', 'image' 	=> HTTP_IMAGE . 'markers/m3.png');
+		
+		} else if ( $category_id == $this->config->get('vehicle_parent_id') ) {
+		
+			$data[] = array('name' => 'Otomobil', 	'image' 	=> HTTP_IMAGE . 'markers/m4.png');
+			$data[] = array('name' => 'Arazi Aracı', 'image' 	=> HTTP_IMAGE . 'markers/m5.png');
+			$data[] = array('name' => 'Motosiklet', 'image' 	=> HTTP_IMAGE . 'markers/m6.png');
+			$data[] = array('name' => 'Klasik Oto', 'image' 	=> HTTP_IMAGE . 'markers/m7.png');
+			$data[] = array('name' => 'Ticari Araçlar', 'image' => HTTP_IMAGE . 'markers/m8.png');
+		
+		}
+
+		return $data;		
+	
+	}
+
+	public function getMapPost () {
+	
+		if ( (int)$this->request->post('parent') != $this->config->get('estate_parent_id') && (int)$this->request->post('parent') != $this->config->get('vehicle_parent_id') ) return false;
+	
+		$this->load->model('location');
+	
+		$data = $this->cache->get('getMapPost.'
+			.md5((int)$this->request->post('parent')
+			.(int)$this->request->post('category_id')
+			.(int)$this->request->post('city_id')
+			.(int)$this->request->post('town_id')
+			.(int)$this->request->post('quarter_id')
+			.$this->request->post('post_type'))
+			
+		);
+		
+		if ( !$data ) {
+	
+			$sql = "
+				SELECT
+					p.id,
+					p.price,
+					p.currency,
+					p.slug,
+					pl.lat,
+					pl.lon,
+					cm.path,
+					c.slug AS category,
+					city.name AS city, 
+					town.name AS town					
+				FROM 
+					post p
+						LEFT JOIN post_category pc ON p.id = pc.post_id
+						LEFT JOIN post_location pl ON p.id = pl.post_id
+						LEFT JOIN category_mirror cm ON p.category_id = cm.id
+						LEFT JOIN category c ON p.category_id = c.id
+						LEFT JOIN city city ON city.id = pl.city_id 
+						LEFT JOIN town town ON town.id = pl.town_id						
+				WHERE 
+					p.status = '1'
+			";
+			
+			if ( (int)$this->request->post('category_id') ) {
+			
+				$sql .= " AND pc.category_id = '".(int)$this->request->post('category_id')."'";
+			
+			}
+			
+			if ( (int)$this->request->post('city_id') ) {
+			
+				$location = $this->model_location->getCityLocation((int)$this->request->post('city_id'));
+			
+				$sql .= " AND pl.city_id = '".(int)$this->request->post('city_id')."'";
+			
+			}	
+			
+			if ( (int)$this->request->post('town_id') ) {
+			
+				$location = $this->model_location->getTownLocation((int)$this->request->post('town_id'));
+			
+				$sql .= " AND pl.town_id = '".(int)$this->request->post('town_id')."'";
+			
+			}	
+			
+			if ( (int)$this->request->post('quarter_id') ) {
+			
+				$location = $this->model_location->getQuarterLocation((int)$this->request->post('quarter_id'));
+				
+				$sql .= " AND pl.quarter_id = '".(int)$this->request->post('quarter_id')."'";
+			
+			}
+			
+			if ( !isset($location) ) {
+
+				$location['lat'] 	= $this->config->get('map_tr_lat');
+				$location['lon'] 	= $this->config->get('map_tr_lon');
+				$location['zoom'] 	= $this->config->get('map_country_zoom');
+			
+			} else {
+
+				unset($location['id']);
+
+			}		
+			
+			$sql .= "
+			
+				 GROUP BY p.id
+			
+			";
+			
+			$query = $this->db->query($sql);
+			
+			if ( $query->rows ) {
+			
+				$data['data'] = array();
+			
+				foreach ( $query->rows as $row ) {
+				
+					$categories 	= $this->parseCategory($row['path']);
+				
+					$markers 		= $this->getPostMapMarkerTypes((int)$this->request->post('parent'));
+					
+					$marker_type	= '';
+					$marker			= HTTP_IMAGE . 'markers/m0.png';
+					
+					if ( $markers ) {
+					
+						foreach ( $markers as $_marker ) {
+						
+							if ( in_array($_marker['name'], $categories) ) {
+							
+								$marker_type	= $_marker['name'];
+								$marker 		= $_marker['image'];
+							
+							}
+						
+						}
+					
+					}
+
+					$title = (
+						(int)$this->request->post('parent') == $this->config->get('estate_parent_id') ? 
+						$this->doEstateTitle($this->parseCategory($row['path'])) :
+						$this->doVehicleTitle($this->parseCategory($row['path']), ' ')
+					);
+					
+					if ( $this->request->post('post_type') != '' && urldecode($this->request->post('post_type')) != $marker_type ) {
+						
+						continue;
+				
+					}
+					
+					$data['data'][] = array(
+					
+						'id' 		=> $row['id'],
+						'title'		=> $title, //( strlen($title) > 19 ? mb_substr($title, 0, 17, 'UTF-8') . '..' : $title ),
+						'location'	=> $row['city'] . ' ' . $row['town'],
+						'price'		=> number_format($row['price'], 0, '.', '.') . ' ' . $row['currency'],
+						'image'		=> $this->getPreviewImage($row['id'], 105, 79),
+						'marker'	=> $marker,
+						'url'		=> $this->url->link('post', false, array('category' => $row['category'], 'post_slug' => $row['slug'], 'post_id' => $row['id'])),
+						'lat'		=> $row['lat'],
+						'lon'		=> $row['lon']
+					
+					);
+				
+				}
+				
+				$data['location'] = $location;
+				
+				$this->cache->setExpire(3600 * 3);
+				
+				$this->cache->set('getMapPost.'
+					.md5((int)$this->request->post('parent')
+					.(int)$this->request->post('category_id')
+					.(int)$this->request->post('city_id')
+					.(int)$this->request->post('town_id')
+					.(int)$this->request->post('quarter_id')
+					.$this->request->post('post_type')), $data
+				);				
+			
+			}
+		
+		}
+		
+		return $data;
+	
+	}
+	
+	public function parseCategory ( $path = false ) {
+	
+		if ( !$path ) return false;
+		
+		return explode(' &#187; ', $path);
+	
+	}
+	
+	public function doEstateTitle ( $category = array() ) {
+	
+		if ( isset($category[2]) && isset($category[3]) ) {
+		
+			return $category[2] . ' ' . $category[3];
+		
+		}
+		
+		return false;
+	
+	}
+	
+	public function doVehicleTitle ( $category = array(), $implode = false, $short = false ) {
+	
+		if ( !is_array($category) ) return false;
+	
+		$count_items	= count($category);
+
+		$data = array();
+		
+		if ( $count_items >= 3 ) {
+		
+			$start_item = $count_items - 3;
+			
+			for ( $i = $start_item; $i <= ($count_items - 1); $i++ ) {
+			
+				array_push($data, $category[$i]);
+			
+			}
+			
+			if ( $short && isset($data[1]) ) unset($data[1]);
+			
+			if ( $implode ) $data = implode($implode, $data);
+		
+		}
+		
+		return $data;
+		
+	}	
+	
+	public function clearPostImages ( $post_id ) {
+	
+		$this->db->query("DELETE FROM post_image WHERE post_id = '".(int)$post_id."'");
+	
+	}	
+	
+	public function addPostImage ( $post_id, $image, $preview = 2, $sort_order = 0 ) {
+	
+		$this->db->query("INSERT INTO post_image SET post_id = '".(int)$post_id."', image = '".$this->db->escape($image)."', preview = '".(int)$preview."', sort_order = '".(int)$sort_order."'");
+	
+	}	
+
+	public function getNextPost( $post_id = 0 ) {
+	
+		if ( !(int)$post_id ) return false;
+		
+		$query = $this->db->query("SELECT p.id, p.slug, c.slug AS category FROM post p LEFT JOIN category c ON p.category_id = c.id WHERE p.id > '".(int)$post_id."' AND p.status = '1' AND p.date_published > '".date('Y-m-d', strtotime(date('Y-m-d') . ' - 3 months'))."' ORDER BY p.id ASC LIMIT 1");
+	
+		if ( $query->rows ) {
+		
+			return $query->row;
+		
+		}
+	
+		return false;
+	
+	}
+	
+	public function getPrevPost( $post_id = 0 ) {
+	
+		if ( !(int)$post_id ) return false;
+		
+		$query = $this->db->query("SELECT p.id, p.slug, c.slug AS category FROM post p LEFT JOIN category c ON p.category_id = c.id WHERE p.id < '".(int)$post_id."' AND p.status = '1' AND p.date_published > '".date('Y-m-d', strtotime(date('Y-m-d') . ' - 3 months'))."' ORDER BY p.id DESC LIMIT 1");
+	
+		if ( $query->rows ) {
+		
+			return $query->row;
+		
+		}
+	
+		return false;
+	
+	}
+	
+	public function postUrl ( $post = array() ) {
+	
+		if ( !isset($post['id']) || !isset($post['slug']) || !isset($post['category']) ) return false;
+		
+		return $this->url->link('post', false, array('category' => $post['category'], 'post_slug' => $post['slug'], 'post_id' => $post['id']));
+	
+	}
+	
+	public function getPostLocation ( $post_id = 0, $implode = false ) {
+	
+		if ( !(int)$post_id ) return false;
+		
+		$query = $this->db->query("SELECT c.name AS city, t.name AS town, q.name AS quarter FROM post_location pl LEFT JOIN city c ON pl.city_id = c.id LEFT JOIN town t ON pl.town_id = t.id LEFT JOIN quarter q ON pl.quarter_id = q.id WHERE pl.post_id = '".(int)$post_id."'");
+	
+		if ( $query->rows ) {
+		
+			return ($implode ? implode($implode, $query->row) : $query->row);
+		
+		}
+	
+		return false;
+	
+	}
+	
+}
+
+?>

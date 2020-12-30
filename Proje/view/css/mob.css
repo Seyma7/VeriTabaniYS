@@ -1,0 +1,205 @@
+
+
+@media  (max-width: 1199px){
+    /*#content .itemSmallGroup .itemSmall .item .itemTitle{padding: 7px 0 0 10px; font-size: 12px;}*/
+    #content .itemSmallGroup .itemSmall .item .itemTitle,
+    #content .itemSmallGroup .itemSmall .item.x2 .itemTitle {padding: 0 0 0 7px;font-size: 11px;line-height: 15px;}
+    #content .itemList .item .itemTitle{font-size: 13px; padding: 10px 5px;}
+    #content .news .newsTitle{bottom:5px; padding: 0 8px; font-size:13px;}
+    #content #newsShowCase .videoBox .playIcon{background-image:url('../images/play_small.png');}
+    .catItems .item label{font-size:0.7em;}
+    #content #magazine .magazineSmall .item .magazineTitle{padding: 4px 12px;}
+}
+
+@media  (min-width: 992px) and (max-width: 1199px){
+    #content .itemList .item{height: 264px;}
+    #content #magazine .magazineSmall .item{font-size:15px;margin-bottom: 2px;}
+    .breadItems .item span{top: 5px;left: 3px; font-size: 1.5em;}
+    .breadItems .item label{font-size: 10px; padding-left: 12px;}
+    #header .weatherNexchange .weather .item{font-size: 11px;}
+    #header .weatherNexchange .weather img{ width: 35px; height: auto; }
+    .breadItems .item{padding:10px 0 9px 3px;}
+    #header .weatherNexchange .weather{margin-bottom: 18px;}
+}
+
+@media  (max-width: 992px){
+    #content .itemBigGroup .itemBig .videoBox .playIcon.big{background-image:url('../images/play_list.png');}
+    /*#content .itemSmallGroup .itemSmall .item .itemTitle{padding-top: 10px;font-size: 12px;line-height: 17px; height: 70px;}*/
+    #content .itemSmallGroup .itemSmall .item .itemTitle,
+    #content .itemSmallGroup .itemSmall .item.x2 .itemTitle  {font-size: 10px;line-height: 14px; height: 66px;}
+    #content .row4 .itemSmallGroup .itemSmall .item .itemTitle{height: 63px;}
+    #content{ padding-top: 70px !important;}
+    #content .itemList .item{height: 244px;}
+    #content .itemList .item .itemTitle{ padding: 8px 2px; font-size: 11px;}
+    #content #magazine .magazineSmall .item .magazineTitle{
+      line-height: 1.4em;
+      height: 75px;
+      overflow: hidden;
+      padding: 5px 10px;
+      font-size: 15px;
+    }
+    #content #magazine .magazineBig .item .magazineInfo .magazineTitle{font-size:15px;}
+    #content .postDetail .postContent .postInfo{padding-bottom: 0;}
+    #content .postDetail .postContent .postAttr{padding: 0;}
+    #content .postDetail .postContent .postShare,
+    #content .postDetail .postContent .postRatio,
+    #content .postDetail .postContent .postViews{float:none; border:none; padding: 9px 0 15px 10px;margin: 7px 0; border-bottom:1px solid #616161;}
+    #content .postDetail .postContent .postRatio{border: none;}
+    #content .postDetail .postContent .postRatio span,
+    #content .postDetail .postContent .postShare span{padding-right: 20px;}
+
+    #menu #mobileNav{ position: fixed; z-index: 500; left: 0; top:0; padding: 0 10px;}
+    #menu #mobileNav .logo{width:70px;float:none; margin:10px auto;}
+    #menu #mobileNav .logo img{width:100%;}
+    #menu #mobileNav .bar{
+    		position: absolute;
+    		top: 20px;
+    		font-size: 1.5em;
+    		color: #d61b22;
+    		-webkit-transition: all linear .6s;
+    		-moz-transition: all linear .6s;
+    		-o-transition: all linear .6s;
+    		transition: all linear .6s;
+    }
+    #menu #mobileNav .bar.leftBar{left: 15px;}
+    #menu #mobileNav .bar.rightBar{right: 15px;}
+    #menu ul.mobileMenu{
+        position: fixed;
+        z-index: 300;
+        width: 100%;
+        top:-1000px;
+        background-color: #f0f0f0;
+        padding: 10px 15px;
+        -webkit-box-shadow: inset 0px -6px 8px -3px rgb(171, 171, 171);
+        -moz-box-shadow: inset 0px -6px 8px -3px rgb(171, 171, 171);
+        box-shadow: inset 0px -6px 8px -3px rgb(171, 171, 171);
+        -webkit-transition: all linear .6s;
+        -moz-transition: all linear .6s;
+        -o-transition: all linear .6s;
+        transition: all linear .6s;
+    }
+    #menu ul.mobileMenu.show{top:61px;}
+    #menu ul.mobileMenu li{float:none;font-size: 10px;}
+    #menu ul.mobileMenu li a{padding:6px 7px;}
+    #menu ul.mobileMenu li.cats{border-top: 1px solid #d2d2d2; text-align: center;}
+    #menu ul.mobileMenu li.cats a {
+    	display: inline-block;
+    	font-size: 10px;
+    	border: 1px solid #dfdfdf;
+    	color: #3a3a3a;
+    	padding: 5px 15px;
+    	-webkit-border-radius: 9px;
+    	-moz-border-radius: 9px;
+    	border-radius: 9px;
+    	margin: 10px 0;
+    	font-weight: normal;
+    }
+    #menu ul.mobileMenu li.cats a i{font-size: 2em;}
+    #menu ul.mobileMenu .mobileSearchForm{ position: relative;}
+    #menu ul.mobileMenu .mobileSearchForm .searchInput{ width: 100%; padding: 5px 35px 5px 5px;}
+    #menu ul.mobileMenu .mobileSearchForm .searchButton{
+    		position: absolute;
+    		right: 0;
+    		top:0;
+    		padding: 9px 10px;
+    		background: #c4c9cc;
+    		cursor:pointer;
+     }
+    #menu .container{width: 100%;}
+}
+
+@media  (max-width: 767px){
+    #menu{border: none;}
+    #content .box,
+    #content .postDetail .box,
+    #content .latestNews .box{padding: 0 6px;}
+    #content #slider #slideImage{padding-left: 0;padding-right: 0;}
+    #content #newsAgenda{padding: 12px 6px 6px 6px;}
+    #content #newsAgenda .news .newsTitle{bottom:10px;}
+    #content .videos .row4 .itemSmallGroup .itemSmall .item  img{width: 100%;}
+    #content .itemSmallGroup,   #content .itemBigGroup,  #content .itemListGroup{padding: 6px 0;}
+    #content .itemSmallGroup .itemSmall,
+    #content .itemSmallGroup .itemSmall .item,
+    #content .itemSmallGroup .itemSmall .itemTitle,
+    #content .itemSmallGroup .itemSmall .item.x2 .itemTitle{padding: 6px;}
+    #content #magazine .magazineSmall .item .magazineTitle{height: 120px; line-height: 1.3em;}
+    #content .itemList{padding: 6px;}
+    #content .itemList .item{height: auto;}
+    #content .itemList .item .itemTitle{height: 70px;padding-top: 4px; padding-bottom: 4px;}
+    #content .latestVideos{padding: 6px;}
+    #content .videoBox .playIcon.big{background-image:url('../images/play_list.png');}
+    #content .itemBigGroup .itemBig{padding: 6px;}
+    #content .itemBigGroup .itemBig .item .itemTitle{font-size:10px; bottom:6px; padding: 0 10px;}
+    #content .postDetail .postContent{padding: 0 15px;}
+    #content .tv .postBroadcast{padding: 0;}
+    #content .tv .postBroadcastList{margin-bottom: 6px;}
+    #content .tv .postBroadcast #postBroadcasting,
+    #content .tv .postBroadcast #postBroadcasting_wrapper{height: 200px !important;}
+    #content #magazine .magazineBig .item .magazineInfo .magazineTitle{ font-size: 15px; bottom: 7px; line-height: 20px;}
+    #content .radio .postBroadcast .postBroadContent .postRadioImage{text-align: center;}
+    #content .radio .postBroadcast .postBroadContent .postRadioImage img{width: auto; height:auto;}
+    #content .radio .postBroadcast .postRadioPlayer{padding: 15px 20px 0 0;}
+    #footer{padding: 40px 0 0 0; margin-bottom: 43px;}
+    #footer .info .item .nav{
+      padding: 0;
+      height: 0;
+      overflow: hidden;
+      -webkit-transition: all linear .3s;
+      -moz-transition: all linear .3s;
+      -o-transition: all linear .3s;
+      transition: all linear .3s;
+    }
+    #footer .info{
+      position: fixed;
+      width: 100%;
+      bottom:-1000px;
+      background: #eef2f5;
+      z-index: 500;
+      padding: 12px 0 35px 0;
+      -webkit-transition: all ease .4s;
+      -moz-transition: all ease .4s;
+      -o-transition: all ease .4s;
+      transition: all ease .4s;
+    }
+    #footer .info.show{bottom:0;border-top: 1px solid #cecece;}
+    #footer .info .item .nav.show{height: auto;overflow: auto;}
+    #footer .info .item{height: auto; padding: 0;}
+    #footer .info .item h2{font-size: 12px;border-bottom: 1px solid #cecece;padding: 0px 0 10px 0; text-align: center; margin-bottom: 10px;}
+    #footer .info .socialMedia{padding: 10px 0 10px 0;text-align: center; margin-bottom: 15px;}
+    #footer .info .socialMedia .postShare a{padding: 3px 5px;}
+    #footer #footerMenu{ position: fixed; width: 100%; z-index: 500; bottom:0; background: #eef2f5; text-align: center; font-size: 2em; color: #d61b22; border-top: 1px solid #cecece;padding-top: 5px;}
+}
+
+@media  (max-width:481px){
+  #content .itemSmallGroup .itemSmall .item .itemTitle,
+  #content .itemSmallGroup .itemSmall .item.x2 .itemTitle {padding: 6px 0 0 0;height: 60px;}
+  #content #slider .slideShadow h1{font-size:17px; padding: 0 12px; bottom:10px; line-height: 18px;}
+  #content #magazine .magazineSmall .item{font-size:12px;}
+  #content #magazine .magazineSmall a:nth-child(Even) .item{background: #f1f4f6;}
+  #content #newsAgenda .news .newsTitle h1{font-size: 15px;padding: 10px;}
+  #content #newsShowCase .videoBox .playIcon{background-position: 4px 4px;}
+  #content .postDetail .postContent .postAttr span.head{font-size: 11px;}
+  #content #newsShowCase .owl-theme .owl-controls .owl-buttons div.owl-next{right:10px;}
+  #content #slider .owl-theme .owl-controls .owl-buttons div.owl-prev{left:5px;margin-top:-40px;}
+  #content #slider .owl-theme .owl-controls .owl-buttons div.owl-next{right:5px;margin-top:-40px;}
+  #content .latestVideos .owl-controls .owl-prev{left:10px;}
+  #content .latestVideos .owl-controls .owl-next{right:10px;}
+  #content .latestVideos .slideText {font-size: 17px; bottom:35px;}
+}
+@media  (max-width: 321px){
+  #content .videoBox .playIcon.big, #content .videoBox .playIcon.list{background-image:url('../images/play_small.png');}
+  #content .news .newsTitle{font-size: 10px;bottom: 6px;padding: 0 5px;}
+  #content .postDetail .postContent .postShare, #content .postDetail .postContent .postRatio, #content .postDetail .postContent .postViews{padding: 9px 0 15px 10px;}
+  #content .latestVideos .owl-controls .owl-buttons div{font-size:5em; margin-top:-50px;}
+  #content .latestVideos .owl-controls .owl-prev{left:15px;}
+  #content .latestVideos .owl-controls .owl-next{right:15px;}
+  #content #specialCriturk.otherElements .owl-theme .owl-controls .owl-buttons div{top:22%;}
+}
+
+@media  (max-height: 510px) and (max-width: 992px){
+  #menu ul.mobileMenu.menu.show{height: 220px; overflow-y: scroll; }
+}
+
+@media  (max-height: 510px) and (max-width: 767px){
+  #footer .info.show{height: 220px; overflow-y: scroll; }
+}
